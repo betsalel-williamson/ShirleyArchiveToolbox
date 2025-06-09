@@ -68,15 +68,45 @@ components:
           type: string
           description: The primary language of the diary.
           example: "English"
+        key_entities:
+          type: array
+          description: A list of significant recurring organizations, groups, or concepts mentioned in the diary.
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "Arcadettes"
+              type:
+                type: string
+                enum: [Organization, Club, Publication, Event, Other]
+                example: "Club"
+              description:
+                type: string
+                example: "A social club the author and her friends (like Lilly and Dody) are members of."
 
     Person:
       type: object
       description: An entry for a single person mentioned in the diary.
       properties:
+        person_id:
+          type: string
+          description: A unique, internally generated ID for this person (e.g., 'person-001'). Useful for linking.
         name:
           type: string
           description: The full name of the person. Standardize where possible (e.g., "Robert" instead of "Rob").
           example: "Eleanor Vance"
+        aliases:
+          type: array
+          description: A list of other names or initials this person is referred to by in the text.
+          items:
+            type: string
+          example: ["Lilly"]
+        category:
+          type: string
+          description: The general category of the person.
+          enum: [Family, Friend, Classmate, Teacher, Public Figure, Acquaintance, Organization Member, Unknown]
+          example: "Friend"
         is_primary_author:
           type: boolean
           description: "True if this person is the author of the diary."
@@ -134,6 +164,21 @@ components:
           description: The inferred overall sentiment of the entry.
           enum: [Positive, Negative, Neutral, Mixed]
           example: "Negative"
+        annotations:
+          type: array
+          description: A list of noteworthy cultural references, slang, or ambiguous terms with explanations.
+          items:
+            type: object
+            properties:
+              term:
+                type: string
+                example: "sharpies"
+              context:
+                type: string
+                example: "There sharpies while we're serious girls."
+              explanation:
+                type: string
+                example: "A 1940s slang term for individuals (often girls) who were perceived as flashy, stylish, and possibly rebellious or of a lower social class."
 
     DateInfo:
       type: object
