@@ -14,7 +14,7 @@
     <ul>
       {% for file in files %}
       <li>
-        <a href="{{ url_for('validate', json_filename=file.filename) }}">
+        <a href="{{ url_for('main.validate', json_filename=file.filename) }}">
           {{ file.filename }}
         </a>
         {% if file.status == 'validated' %}

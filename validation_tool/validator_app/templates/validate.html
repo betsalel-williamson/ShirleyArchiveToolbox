@@ -21,7 +21,7 @@
         </div>
         <div class="control-group">
           <label for="scale-slider">Scale:</label>
-          <input type="range" id="scale-slider" min="0.5" max="2.0" value="1.0" step="0.01">
+          <input type="range" id="scale-slider" min="0.01" max="2.0" value="1.0" step="0.01">
           <input type="number" id="scale-input" value="1.0" step="0.01"> x
         </div>
         <!-- NEW: Translate controls -->
@@ -60,7 +60,7 @@
         <span id="autosave-status"></span>
       </h3>
       <!-- The form's action now points to the commit route -->
-      <form id="main-form" action="{{ url_for('commit', json_filename=json_filename) }}" method="post">
+      <form id="main-form" action="{{ url_for('api.commit', json_filename=json_filename) }}" method="post">
         <!-- NEW: A hidden field to hold the ORIGINAL json data -->
         <textarea name="json_data" style="display:none;">{{ json_data_string }}</textarea>
         <!-- Hidden fields to store the final transformation state -->
@@ -80,7 +80,7 @@
           <button type="submit" name="action" value="commit" class="approve-btn">Commit & Next</button>
         </div>
       </form>
-      <a href="{{ url_for('index') }}" class="back-link">← Back to List</a>
+      <a href="{{ url_for('main.index') }}" class="back-link">← Back to List</a>
     </div>
 
     <script>
@@ -170,7 +170,7 @@
             statusIndicator.className = 'status-progress';
 
             // 1. Fetch the pristine data from the new server endpoint
-            const response = await fetch("{{ url_for('get_source_data', json_filename=json_filename) }}");
+            const response = await fetch("{{ url_for('api.get_source_data', json_filename=json_filename) }}");
             if (!response.ok) {
               throw new Error(`Could not fetch source data. Server status: ${response.status}`);
             }
@@ -227,7 +227,7 @@
           statusIndicator.className = 'status-progress';
           const formData = new FormData(mainForm);
           try {
-            const response = await fetch("{{ url_for('autosave', json_filename=json_filename) }}", { method: 'POST', body: formData });
+            const response = await fetch("{{ url_for('api.autosave', json_filename=json_filename) }}", { method: 'POST', body: formData });
             if (response.ok) {
               statusIndicator.textContent = 'Draft Saved ✓'; statusIndicator.className = 'status-validated';
             } else { throw new Error(`Server responded with status: ${response.status}`); }
