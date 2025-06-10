@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Image Validation</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+  <div class="container">
+    <h1>Transcription Validation</h1>
+    <p>Select a file to validate. Status will be shown.</p>
+    <ul>
+      {% for file in files %}
+      <li>
+        <a href="{{ url_for('validate', json_filename=file.filename) }}">
+          {{ file.filename }}
+        </a>
+        {% if file.status == 'validated' %}
+        <span class="status-validated">Validated ✓</span>
+        {% elif file.status == 'in_progress' %}
+        <span class="status-progress">In Progress...</span>
+        {% endif %}
+      </li>
+      {% else %}
+      <li>No JSON files found in any data directory.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</body>
+
+</html>

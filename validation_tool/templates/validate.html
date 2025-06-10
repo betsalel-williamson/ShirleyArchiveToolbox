@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Validate {{ json_filename }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+  <div class="container validation-container">
+    <div class="image-pane">
+      <h2>{{ image_filename }}</h2>
+
+      <!-- NEW: Transformation Controls -->
+      <div class="controls">
+        <div class="control-group">
+          <label for="rotate-slider">Rotate:</label>
+          <input type="range" id="rotate-slider" min="-45" max="45" value="0" step="0.1">
+          <input type="number" id="rotate-input" value="0" step="0.1"> °
+        </div>
+        <div class="control-group">
+          <label for="scale-slider">Scale:</label>
+          <input type="range" id="scale-slider" min="0.5" max="2.0" value="1.0" step="0.01">
+          <input type="number" id="scale-input" value="1.0" step="0.01"> x
+        </div>
+        <!-- NEW: Translate controls -->
+        <div class="control-group">
+          <label for="translateX-input">Translate:</label>
+          <input type="number" id="translateX-input" value="0" step="1" placeholder="X">
+          <input type="number" id="translateY-input" value="0" step="1" placeholder="Y"> px
+        </div>
+        <!-- NEW: Undo/Redo/Revert Controls -->
+        <div class="control-group action-buttons">
+          <button id="undo-btn" class="secondary-btn" disabled>Undo</button>
+          <button id="redo-btn" class="secondary-btn" disabled>Redo</button>
+          <button id="revert-btn" class="danger-btn">Revert to Original</button>
+        </div>
+        <p>Then, click and drag the red boxes to align them.</p>
+      </div>
+
+      <div class="image-wrapper">
+        <img src="{{ url_for('static', filename='images/' + image_filename) }}" alt="Base Image">
+        <div id="bbox-overlay">
+          {% for word in annotations %}
+          {% set bbox = word.bounding_box %}
+          <div class="bounding-box" style="left: {{ bbox.x_min }}px; top: {{ bbox.y_min }}px;
+                                    width: {{ bbox.x_max - bbox.x_min }}px; height: {{ bbox.y_max - bbox.y_min }}px;">
+            <span class="box-label">{{ word.display_id }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-pane">
+      <h3>
+        Word Transcriptions
+        <!-- NEW: Autosave status indicator -->
+        <span id="autosave-status"></span>
+      </h3>
+      <!-- The form's action now points to the commit route -->
+      <form id="main-form" action="{{ url_for('commit', json_filename=json_filename) }}" method="post">
+        <!-- NEW: A hidden field to hold the ORIGINAL json data -->
+        <textarea name="json_data" style="display:none;">{{ json_data_string }}</textarea>
+        <!-- Hidden fields to store the final transformation state -->
+        <input type="hidden" name="offsetX" id="offsetX" value="0">
+        <input type="hidden" name="offsetY" id="offsetY" value="0">
+        <input type="hidden" name="rotation" id="rotation" value="0">
+        <input type="hidden" name="scale" id="scale" value="1.0">
+
+        {% for word in annotations %}
+        <div class="form-group">
+          <label for="text_{{ word.id }}">Word {{ word.display_id }}:</label>
+          <input type="text" id="text_{{ word.id }}" name="text_{{ word.id }}" value="{{ word.text }}">
+        </div>
+        {% endfor %}
+        <div class="buttons">
+          <!-- Simplified to one commit button -->
+          <button type="submit" name="action" value="commit" class="approve-btn">Commit & Next</button>
+        </div>
+      </form>
+      <a href="{{ url_for('index') }}" class="back-link">← Back to List</a>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // --- UI Elements ---
+        const mainForm = document.getElementById('main-form');
+        const overlay = document.getElementById('bbox-overlay');
+        const statusIndicator = document.getElementById('autosave-status');
+        const offsetXInput = document.getElementById('offsetX');
+        const offsetYInput = document.getElementById('offsetY');
+        const rotationInput = document.getElementById('rotation');
+        const scaleInput = document.getElementById('scale');
+        const rotateSlider = document.getElementById('rotate-slider');
+        const rotateNumberInput = document.getElementById('rotate-input');
+        const scaleSlider = document.getElementById('scale-slider');
+        const scaleNumberInput = document.getElementById('scale-input');
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+        const revertBtn = document.getElementById('revert-btn');
+        const translateXInput = document.getElementById('translateX-input');
+        const translateYInput = document.getElementById('translateY-input');
+
+        // --- State Management ---
+        let isDragging = false;
+        let startX, startY;
+        let debounceTimer;
+        let history = [];
+        let historyIndex = -1;
+        let isApplyingHistory = false;
+
+        // Re-pasting the unchanged functions here for completeness
+        function captureState() {
+          const state = { offsetX: parseFloat(offsetXInput.value), offsetY: parseFloat(offsetYInput.value), rotation: parseFloat(rotationInput.value), scale: parseFloat(scaleInput.value), texts: {} };
+          mainForm.querySelectorAll('input[type="text"]').forEach(input => { state.texts[input.name] = input.value; });
+          return state;
+        }
+
+        function applyState(state) {
+          isApplyingHistory = true;
+          offsetXInput.value = state.offsetX;
+          offsetYInput.value = state.offsetY;
+          rotationInput.value = state.rotation;
+          scaleInput.value = state.scale;
+          translateXInput.value = state.offsetX.toFixed(0);
+          translateYInput.value = state.offsetY.toFixed(0);
+          rotateSlider.value = state.rotation;
+          rotateNumberInput.value = state.rotation.toFixed(2);
+          scaleSlider.value = state.scale;
+          scaleNumberInput.value = state.scale.toFixed(2);
+          overlay.style.transform = `translate(${state.offsetX}px, ${state.offsetY}px) rotate(${state.rotation}deg) scale(${state.scale})`;
+          for (const [name, value] of Object.entries(state.texts)) {
+            const input = mainForm.querySelector(`input[name="${name}"]`);
+            if (input) input.value = value;
+          }
+          setTimeout(() => { isApplyingHistory = false; }, 50);
+        }
+
+        function pushStateToHistory() {
+          if (isApplyingHistory) return;
+          const newState = captureState();
+          if (historyIndex > -1 && JSON.stringify(newState) === JSON.stringify(history[historyIndex])) { return; }
+          if (historyIndex < history.length - 1) { history.splice(historyIndex + 1); }
+          history.push(newState);
+          historyIndex = history.length - 1;
+          updateUndoRedoButtons();
+        }
+        function updateUndoRedoButtons() {
+          undoBtn.disabled = historyIndex <= 0;
+          redoBtn.disabled = historyIndex >= history.length - 1;
+        }
+
+        undoBtn.addEventListener('click', () => {
+          if (historyIndex > 0) { historyIndex--; applyState(history[historyIndex]); updateUndoRedoButtons(); debouncedAutoSave(); }
+        });
+        redoBtn.addEventListener('click', () => {
+          if (historyIndex < history.length - 1) { historyIndex++; applyState(history[historyIndex]); updateUndoRedoButtons(); debouncedAutoSave(); }
+        });
+
+        // THIS IS THE MAINLY UPDATED FUNCTION
+        revertBtn.addEventListener('click', async () => {
+          if (!confirm('Are you sure you want to revert to the original source file?\n\nThis will overwrite your current draft.')) {
+            return;
+          }
+
+          try {
+            statusIndicator.textContent = 'Reverting...';
+            statusIndicator.className = 'status-progress';
+
+            // 1. Fetch the pristine data from the new server endpoint
+            const response = await fetch("{{ url_for('get_source_data', json_filename=json_filename) }}");
+            if (!response.ok) {
+              throw new Error(`Could not fetch source data. Server status: ${response.status}`);
+            }
+            const sourceData = await response.json();
+
+            // 2. CRITICAL: Update the hidden textarea that holds the base for transformations
+            const baseDataTextarea = document.querySelector('textarea[name="json_data"]');
+            baseDataTextarea.value = JSON.stringify(sourceData);
+
+            // 3. Construct a "clean slate" state object from the source data
+            const revertedState = {
+              offsetX: 0,
+              offsetY: 0,
+              rotation: 0,
+              scale: 1.0,
+              texts: {}
+            };
+
+            sourceData.lines.forEach((line, line_idx) => {
+              line.words.forEach((word, word_idx) => {
+                const wordId = `${line_idx}_${word_idx}`;
+                revertedState.texts[`text_${wordId}`] = word.text;
+              });
+            });
+
+            // 4. Apply the clean state to the UI
+            applyState(revertedState);
+
+            // 5. Reset the undo/redo history with this clean state as the new beginning
+            history = [revertedState];
+            historyIndex = 0;
+            updateUndoRedoButtons();
+
+            // 6. Trigger an auto-save to overwrite the draft on the server
+            autoSaveState(); // Use direct call, not debounced, for immediate action
+
+          } catch (error) {
+            console.error('Revert failed:', error);
+            alert('Failed to revert to original. Please check the console for errors.');
+            statusIndicator.textContent = 'Revert Failed!';
+            statusIndicator.className = 'status-error';
+          }
+        });
+
+        // --- Auto-Save Logic ---
+        const debouncedAutoSave = debounce(() => {
+          pushStateToHistory();
+          autoSaveState();
+        }, 1000);
+
+
+        async function autoSaveState() {
+          statusIndicator.textContent = 'Saving...';
+          statusIndicator.className = 'status-progress';
+          const formData = new FormData(mainForm);
+          try {
+            const response = await fetch("{{ url_for('autosave', json_filename=json_filename) }}", { method: 'POST', body: formData });
+            if (response.ok) {
+              statusIndicator.textContent = 'Draft Saved ✓'; statusIndicator.className = 'status-validated';
+            } else { throw new Error(`Server responded with status: ${response.status}`); }
+          } catch (error) { console.error('Autosave failed:', error); statusIndicator.textContent = 'Save Failed!'; statusIndicator.className = 'status-error'; }
+        }
+        function debounce(func, delay) {
+          return function (...args) { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => { func.apply(this, args); }, delay); };
+        }
+        function updateVisualTransformFromControls() {
+          overlay.style.transform = `translate(${offsetXInput.value}px, ${offsetYInput.value}px) rotate(${rotationInput.value}deg) scale(${scaleInput.value})`;
+        }
+        overlay.addEventListener('mousedown', (e) => {
+          isDragging = true; const baseOffsetX = parseFloat(offsetXInput.value); const baseOffsetY = parseFloat(offsetYInput.value);
+          startX = e.clientX - baseOffsetX; startY = e.clientY - baseOffsetY; overlay.classList.add('dragging'); e.preventDefault();
+        });
+        document.addEventListener('mousemove', (e) => {
+          if (!isDragging) return; const newOffsetX = e.clientX - startX; const newOffsetY = e.clientY - startY;
+          offsetXInput.value = newOffsetX; offsetYInput.value = newOffsetY;
+          translateXInput.value = Math.round(newOffsetX); translateYInput.value = Math.round(newOffsetY);
+          updateVisualTransformFromControls();
+        });
+        document.addEventListener('mouseup', () => { if (!isDragging) return; isDragging = false; overlay.classList.remove('dragging'); debouncedAutoSave(); });
+        mainForm.querySelectorAll('input[type="text"]').forEach(input => { input.addEventListener('input', debouncedAutoSave); });
+        rotateSlider.addEventListener('input', () => { rotationInput.value = rotateSlider.value; rotateNumberInput.value = parseFloat(rotateSlider.value).toFixed(2); updateVisualTransformFromControls(); });
+        scaleSlider.addEventListener('input', () => { scaleInput.value = scaleSlider.value; scaleNumberInput.value = parseFloat(scaleSlider.value).toFixed(2); updateVisualTransformFromControls(); });
+        rotateNumberInput.addEventListener('change', () => { rotateSlider.value = rotateNumberInput.value; rotationInput.value = rotateNumberInput.value; updateVisualTransformFromControls(); debouncedAutoSave(); });
+        scaleNumberInput.addEventListener('change', () => { scaleSlider.value = scaleNumberInput.value; scaleInput.value = scaleNumberInput.value; updateVisualTransformFromControls(); debouncedAutoSave(); });
+        translateXInput.addEventListener('change', () => { offsetXInput.value = translateXInput.value; updateVisualTransformFromControls(); debouncedAutoSave(); });
+        translateYInput.addEventListener('change', () => { offsetYInput.value = translateYInput.value; updateVisualTransformFromControls(); debouncedAutoSave(); });
+        function initialize() {
+          overlay.style.transformOrigin = 'center center'; applyState(captureState()); pushStateToHistory(); updateUndoRedoButtons();
+        }
+        initialize();
+      });
+    </script>
+</body>
+
+</html>
