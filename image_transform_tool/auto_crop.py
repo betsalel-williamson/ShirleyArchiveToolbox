@@ -5,18 +5,25 @@ import argparse
 
 def order_points(pts):
     """
-    Initializes a list of coordinates that will be ordered such that
-    the first entry in the list is the top-left, the second entry
-    is the top-right, the third is the bottom-right, and the fourth
-    is the bottom-left.
+    Takes a set of points and finds the top-left, top-right,
+    bottom-right, and bottom-left corners among them.
     """
     rect = np.zeros((4, 2), dtype="float32")
+
+    # The top-left point will have the smallest sum (x+y)
     s = pts.sum(axis=1)
     rect[0] = pts[np.argmin(s)]
+
+    # The bottom-right point will have the largest sum (x+y)
     rect[2] = pts[np.argmax(s)]
+
+    # The top-right point will have the largest difference (x-y)
+    # The bottom-left will have the smallest difference (x-y)
+    # Note: np.diff is y-x, so we find min for top-right and max for bottom-left
     diff = np.diff(pts, axis=1)
     rect[1] = pts[np.argmin(diff)]
     rect[3] = pts[np.argmax(diff)]
+
     return rect
 
 
@@ -51,51 +58,42 @@ def main():
 
     print("[INFO] STEP 1: Edge Detection complete.")
 
-    # --- PRO-TIP: Make the outline more robust ---
-    # The Canny edges can be disconnected. Dilation helps to close these gaps.
-    print("[INFO] Applying dilation to close gaps in edges...")
-    kernel = np.ones((5, 5), np.uint8)
-    dilated = cv2.dilate(edged, kernel, iterations=1)
-
     # --- 3. Find the Document Contour ---
     print("[INFO] STEP 2: Finding document contour...")
-    # Find contours in the DILATED image, not the original edged one.
+
     contours, _ = cv2.findContours(
-        dilated.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE
+        edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
-    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:5]
 
-    screenCnt = None
-    for c in contours:
-        peri = cv2.arcLength(c, True)
-        approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-        if len(approx) == 4:
-            screenCnt = approx
-            break
-
-    if screenCnt is None:
-        print(
-            "[ERROR] No 4-point document contour found. This can happen with complex backgrounds or lighting."
-        )
-        print(
-            "[DEBUG] To see why it failed, check the 'edged' and 'dilated' intermediate images."
-        )
-        # Save intermediate steps for debugging
-        cv2.imwrite(output_path.replace(".jpg", "_edged.jpg"), edged)
-        cv2.imwrite(output_path.replace(".jpg", "_dilated.jpg"), dilated)
+    if len(contours) == 0:
+        print("[ERROR] No contours found. Check Canny edge detection parameters.")
         return
 
-    print("[INFO] STEP 3: Document contour found.")
+    # Assume the largest contour is the document
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    document_contour = contours[0]
 
+    # *** THIS IS THE MAJOR CHANGE ***
+    # Instead of approximating the polygon, we find the extreme corner points
+    # of the largest contour. This is robust to occlusions like hands.
+    print("[INFO] STEP 3: Found largest contour. Identifying extreme corner points...")
+    ordered_pts_resized = order_points(document_contour.reshape(-1, 2))
+
+    # For visualization, draw the found contour and corners on the resized image
     detected_path = output_path.replace(".jpg", "_detected.jpg").replace(
         ".png", "_detected.png"
     )
-    cv2.drawContours(image, [screenCnt], -1, (0, 255, 0), 2)
+    # Draw the full contour
+    cv2.drawContours(image, [document_contour], -1, (0, 255, 0), 2)
+    # Draw circles on the identified corners
+    for point in ordered_pts_resized:
+        cv2.circle(image, tuple(point.astype(int)), 5, (0, 0, 255), -1)
     cv2.imwrite(detected_path, image)
     print(f"[INFO] Saved detection visualization to {detected_path}")
 
     # --- 4. Apply Perspective Transform and Crop ---
-    ordered_pts = order_points(screenCnt.reshape(4, 2) * ratio)
+    # Scale the corner points back to the original image size
+    ordered_pts = ordered_pts_resized * ratio
     (tl, tr, br, bl) = ordered_pts
 
     widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
