@@ -2,19 +2,20 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { connectDB, sequelize } from './database.js';
-import Document from './models/Document.js';
+import { db, setupDatabase } from './db'; // <-- CORRECTED PATH
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// Path to data is now three levels up from server/src/
 const SOURCE_DATA_DIR = path.join(__dirname, '..', '..', 'data', 'source_json');
 
 async function seedDatabase() {
-  console.log('Connecting to database...');
-  await connectDB();
+  // ... (rest of the seed function is the same)
+  console.log('Setting up database...');
+  await setupDatabase();
 
   console.log('Clearing existing documents...');
-  await Document.destroy({ where: {}, truncate: true });
+  await db.deleteFrom('documents').execute();
 
   console.log(`Reading from ${SOURCE_DATA_DIR}...`);
   const files = await fs.readdir(SOURCE_DATA_DIR);
@@ -31,7 +32,6 @@ async function seedDatabase() {
     const fileContent = await fs.readFile(filePath, 'utf-8');
     const data = JSON.parse(fileContent);
 
-    // Add unique IDs to the data
     let wordCounter = 0;
     data.lines.forEach((line: any, line_idx: number) => {
         line.words.forEach((word: any, word_idx: number) => {
@@ -40,18 +40,18 @@ async function seedDatabase() {
         });
     });
 
-    await Document.create({
+    await db.insertInto('documents').values({
       filename,
       imageSource: data.image_source,
       status: 'source',
-      sourceData: data,
-      currentData: data,
-    });
+      sourceData: JSON.stringify(data),
+      currentData: JSON.stringify(data),
+    }).execute();
+
     console.log(`  - Seeded ${filename} into the database.`);
   }
 
   console.log('Database seeding complete!');
-  await sequelize.close();
 }
 
 seedDatabase().catch(error => {

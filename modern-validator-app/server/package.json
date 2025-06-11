@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc"
+    "build": "tsx"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",

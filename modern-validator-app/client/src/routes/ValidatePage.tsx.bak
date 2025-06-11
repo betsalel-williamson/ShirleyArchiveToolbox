@@ -1,10 +1,10 @@
 // client/src/routes/ValidatePage.tsx
 import React, { useState, useEffect, useRef, useReducer } from 'react';
-import { useFetcher, Link, useNavigate, useParams } from 'react-router-dom';
+import { useLoaderData, useFetcher, Link, useNavigate, useParams } from 'react-router-dom';
 import { BoundingBox } from '../components/BoundingBox';
 import { Controls } from '../components/Controls';
 
-// --- Types (remain the same) ---
+// --- Types ---
 interface Word { id: string; display_id: number; text: string; bounding_box: { x_min: number; y_min: number; x_max: number; y_max: number; }; }
 interface CurrentData { image_source: string; image_dimensions: { width: number, height: number }; lines: { words: Word[] }[]; [key: string]: any }
 interface DocumentData { id: number; filename: string; imageSource: string; currentData: CurrentData, error?: string, status?: number }
@@ -12,7 +12,28 @@ type TransformState = { offsetX: number; offsetY: number; rotation: number; scal
 type TextState = { [key:string]: string };
 type HistoryState = { transforms: TransformState; texts: TextState; };
 
-// The action function is for form submissions and still works perfectly.
+declare global {
+    interface Window { __INITIAL_DATA__?: any; }
+}
+
+// --- Loader & Action for react-router ---
+export async function loader({ params }: { params: { id?: string } }) {
+  // Client-side hydration: use data injected by the server
+  if (typeof window !== 'undefined' && window.__INITIAL_DATA__) {
+    const data = window.__INITIAL_DATA__;
+    delete window.__INITIAL_DATA__;
+    return data;
+  }
+
+  // Client-side navigation fetch
+  const res = await fetch(`/api/documents/${params.id}`);
+  if (!res.ok) {
+    if (res.status === 404) return { status: 404, error: "Document not found" };
+    throw new Error("Failed to fetch validation data");
+  }
+  return res.json();
+}
+
 export async function action({ request, params }: { request: Request, params: { id?: string } }) {
     const formData = await request.formData();
     const res = await fetch(`/api/documents/${params.id}/commit`, {
@@ -21,48 +42,33 @@ export async function action({ request, params }: { request: Request, params: { 
     return res.json();
 }
 
+
 // --- Main Component ---
 export default function ValidatePage() {
-    const { id } = useParams<{ id: string }>();
+    const initialData = useLoaderData() as DocumentData;
     const fetcher = useFetcher();
     const navigate = useNavigate();
+    const { id } = useParams();
 
-    // --- NEW: State for holding data, loading, and errors ---
-    const [documentData, setDocumentData] = useState<DocumentData | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const getInitialAnnotations = () => initialData.currentData?.lines.flatMap(line => line.words) || [];
 
-    // --- NEW: useEffect to fetch data on mount or when ID changes ---
-    useEffect(() => {
-        if (!id) return;
-        setDocumentData(null); // Reset on ID change
-        setError(null);
-
-        fetch(`/api/documents/${id}`)
-            .then(res => {
-                if (!res.ok) throw new Error(`Failed to fetch document ${id}`);
-                return res.json();
-            })
-            .then(data => setDocumentData(data))
-            .catch(err => setError(err.message));
-    }, [id]);
-
-    const getInitialAnnotations = () => documentData?.currentData?.lines.flatMap(line => line.words) || [];
-
-    // State management needs to be initialized safely
-    const [texts, setTexts] = useState<TextState>({});
+    // --- State Management ---
+    const [texts, setTexts] = useState<TextState>(() => Object.fromEntries(getInitialAnnotations().map(w => [`text_${w.id}`, w.text])));
     const [transforms, setTransforms] = useState<TransformState>({ offsetX: 0, offsetY: 0, rotation: 0, scale: 1.0 });
     const [history, dispatchHistory] = useReducer(historyReducer, { past: [], present: { transforms, texts }, future: [] });
     const [status, setStatus] = useState<{ msg: string, type: string }>({ msg: '', type: '' });
 
+    // Refs
     const isDragging = useRef(false);
     const startPos = useRef({ x: 0, y: 0 });
     const overlayRef = useRef<HTMLDivElement>(null);
-    const initialDataRef = useRef(documentData?.currentData);
+    const initialDataRef = useRef(initialData.currentData);
 
-    // Effect to reset state when new data arrives
+    // --- Effects ---
+    // Reset state when navigating to a new document
     useEffect(() => {
-        if (!documentData || !documentData.currentData) return;
-        initialDataRef.current = documentData.currentData;
+        if (!initialData || !initialData.currentData) return;
+        initialDataRef.current = initialData.currentData;
         const newAnnotations = getInitialAnnotations();
         const newTexts = Object.fromEntries(newAnnotations.map(w => [`text_${w.id}`, w.text]));
         const newTransforms = { offsetX: 0, offsetY: 0, rotation: 0, scale: 1.0 };
@@ -70,17 +76,15 @@ export default function ValidatePage() {
         setTransforms(newTransforms);
         dispatchHistory({ type: 'RESET', payload: { transforms: newTransforms, texts: newTexts } });
         setStatus({ msg: '', type: '' });
-    }, [documentData]);
+    }, [id, initialData]);
 
-    // ... (The rest of the effects and handlers are largely the same) ...
     // Debounced Autosave Effect
     useEffect(() => {
-        if (!documentData) return; // Don't save if no data
         const handler = setTimeout(() => {
             if (history.past.length > 0) autoSaveState();
         }, 1500);
         return () => clearTimeout(handler);
-    }, [history.present, documentData]);
+    }, [history.present]);
 
     // Commit navigation effect
     useEffect(() => {
@@ -111,6 +115,7 @@ export default function ValidatePage() {
         };
     }, [transforms, texts]);
 
+    // --- Handlers ---
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         e.preventDefault();
         isDragging.current = true;
@@ -128,14 +133,14 @@ export default function ValidatePage() {
         try {
             const res = await fetch(`/api/documents/${id}/revert`, { method: 'POST' });
             const { data } = await res.json();
-            initialDataRef.current = data;
+            initialDataRef.current = data; // Update the base data
             const revertedAnnotations = data.lines.flatMap((line: any) => line.words);
             const revertedTexts = Object.fromEntries(revertedAnnotations.map((w: Word) => [`text_${w.id}`, w.text]));
             const revertedTransforms = { offsetX: 0, offsetY: 0, rotation: 0, scale: 1.0 };
             setTexts(revertedTexts);
             setTransforms(revertedTransforms);
             dispatchHistory({ type: 'RESET', payload: { transforms: revertedTransforms, texts: revertedTexts } });
-            autoSaveState(data);
+            autoSaveState(data); // Immediately save the reverted state
         } catch (error) { setStatus({ msg: 'Revert Failed!', type: 'status-error' }); }
     };
 
@@ -156,20 +161,24 @@ export default function ValidatePage() {
         } catch (error) { setStatus({ msg: 'Save Failed!', type: 'status-error' }); }
     };
 
-    if (error) return <div className="container"><h1>Error</h1><p>{error}</p></div>;
-    if (!documentData) return <div className="container"><h1>Loading document...</h1></div>;
+    if (initialData.status === 404) {
+        return <div className="container"><h2>{initialData.error}</h2><Link to="/">Back to List</Link></div>;
+    }
 
     const annotations = getInitialAnnotations();
+    if (!annotations) {
+        return <div className="container">Loading...</div>; // Or some other loading state
+    }
 
     return (
         <div className="container validation-container">
             <div className="image-pane">
-                <h2>{documentData.filename}</h2>
+                <h2>{initialData.filename}</h2>
                 <Controls {...{ transforms, onTransformChange: handleTransformChange, onCommit: handleTransformCommit,
                     onUndo: () => dispatchHistory({ type: 'UNDO' }), onRedo: () => dispatchHistory({ type: 'REDO' }), onRevert: handleRevert,
                     canUndo: history.past.length > 0, canRedo: history.future.length > 0 }} />
                 <div className="image-wrapper">
-                    <img src={`/static/images/${documentData.currentData.image_source}`} alt="Base" />
+                    <img src={`/static/images/${initialData.currentData.image_source}`} alt="Base" />
                     <div id="bbox-overlay" ref={overlayRef} onMouseDown={handleMouseDown}
                         style={{ transform: `translate(${transforms.offsetX}px, ${transforms.offsetY}px) rotate(${transforms.rotation}deg) scale(${transforms.scale})`, transformOrigin: 'center' }}>
                         {annotations.map(word => <BoundingBox key={word.id} word={word} />)}
@@ -200,6 +209,7 @@ export default function ValidatePage() {
     );
 }
 
+// --- Undo/Redo Reducer ---
 type Action = { type: 'UNDO' } | { type: 'REDO' } | { type: 'SET', payload: HistoryState } | { type: 'RESET', payload: HistoryState };
 interface State { past: HistoryState[]; present: HistoryState; future: HistoryState[]; }
 function historyReducer(state: State, action: Action): State {

@@ -1,8 +1,9 @@
+// server/tsconfig.json
 {
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
-    "moduleResolution": "node",
+    "moduleResolution": "node", // <-- THE CRITICAL FIX
     "outDir": "dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

@@ -1,64 +1,49 @@
-// server.ts
+// server/src/server.ts
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 
-import { connectDB } from './server/src/database.js';
-import apiRouter from './server/src/api.js';
+import { setupDatabase } from './db';
+import apiRouter from './api';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const MONOREPO_ROOT = path.join(__dirname, '..', '..');
 
 async function createServer() {
   const app = express();
 
-  // Connect to Database
-  await connectDB();
+  await setupDatabase();
 
-  // Create Vite server in development mode
   const vite = await createViteServer({
     server: { middlewareMode: true },
     appType: 'custom',
-    root: path.join(__dirname, 'client'), // Point to client directory
+    root: path.join(MONOREPO_ROOT, 'client'),
   });
   app.use(vite.middlewares);
 
-  // Middleware
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // API routes
   app.use('/api', apiRouter);
+  app.use('/static/images', express.static(path.join(MONOREPO_ROOT, 'data', 'images')));
 
-  // Serve static images from the root data folder
-  app.use('/static/images', express.static(path.join(__dirname, 'data', 'images')));
-
-  // SSR logic
   app.use('*', async (req, res, next) => {
     const url = req.originalUrl;
-
     try {
-      let template = await fs.readFile(path.join(__dirname, 'client/index.html'), 'utf-8');
+      let template = await fs.readFile(path.join(MONOREPO_ROOT, 'client/index.html'), 'utf-8');
       template = await vite.transformIndexHtml(url, template);
 
       const { render } = await vite.ssrLoadModule('/src/entry-server.tsx');
-
-      const { appHtml, router } = await render(url);
-
-      // On the server, we can check the loader data. If a loader returns a 404 response, we can use that status code.
-      const loaderData = router.state.loaderData[router.state.location.pathname];
-      if (loaderData && loaderData.status === 404) {
-        res.status(404);
-      }
+      // We no longer pass any data. The server just renders the shell.
+      const { appHtml } = await render(url);
 
       const html = template.replace(`<!--ssr-outlet-->`, appHtml);
 
       res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
     } catch (e) {
-      if (e instanceof Error) {
-        vite.ssrFixStacktrace(e);
-      }
+      if (e instanceof Error) vite.ssrFixStacktrace(e);
       next(e);
     }
   });

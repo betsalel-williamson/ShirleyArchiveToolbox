@@ -1,3 +1,214 @@
+#!/bin/bash
+
+echo "🚀 Pivoting to a simpler Client-Side Rendering (CSR) data-fetching model..."
+
+# --- 1. Simplify server/src/server.ts ---
+# It no longer needs to know about data loaders.
+echo "✅ 1/5: Simplifying server/src/server.ts..."
+cat << 'EOF' > server/src/server.ts
+// server/src/server.ts
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import express from 'express';
+import { createServer as createViteServer } from 'vite';
+
+import { setupDatabase } from './db';
+import apiRouter from './api';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const MONOREPO_ROOT = path.join(__dirname, '..', '..');
+
+async function createServer() {
+  const app = express();
+
+  await setupDatabase();
+
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
+    appType: 'custom',
+    root: path.join(MONOREPO_ROOT, 'client'),
+  });
+  app.use(vite.middlewares);
+
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  app.use('/api', apiRouter);
+  app.use('/static/images', express.static(path.join(MONOREPO_ROOT, 'data', 'images')));
+
+  app.use('*', async (req, res, next) => {
+    const url = req.originalUrl;
+    try {
+      let template = await fs.readFile(path.join(MONOREPO_ROOT, 'client/index.html'), 'utf-8');
+      template = await vite.transformIndexHtml(url, template);
+
+      const { render } = await vite.ssrLoadModule('/src/entry-server.tsx');
+      // We no longer pass any data. The server just renders the shell.
+      const { appHtml } = await render(url);
+
+      const html = template.replace(`<!--ssr-outlet-->`, appHtml);
+
+      res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+    } catch (e) {
+      if (e instanceof Error) vite.ssrFixStacktrace(e);
+      next(e);
+    }
+  });
+
+  app.listen(5173, () => {
+    console.log('Server running at http://localhost:5173');
+  });
+}
+
+createServer();
+EOF
+
+# --- 2. Simplify client/src/entry-server.tsx ---
+# It no longer needs to handle any data.
+echo "✅ 2/5: Simplifying client/src/entry-server.tsx..."
+cat << 'EOF' > client/src/entry-server.tsx
+// client/src/entry-server.tsx
+import React from 'react';
+import ReactDOMServer from 'react-dom/server';
+import {
+  createStaticHandler,
+  createStaticRouter,
+  StaticRouterProvider,
+} from 'react-router-dom/server';
+import { routes } from './App';
+import './main.css';
+
+export async function render(url: string) {
+  const { query, dataRoutes } = createStaticHandler(routes);
+  const fetchRequest = new Request(`http://localhost:5173${url}`);
+  const context = await query(fetchRequest);
+
+  if (context instanceof Response) {
+    throw context;
+  }
+
+  const router = createStaticRouter(dataRoutes, context);
+
+  const appHtml = ReactDOMServer.renderToString(
+    <React.StrictMode>
+      <StaticRouterProvider router={router} context={context} />
+    </React.StrictMode>
+  );
+
+  return { appHtml };
+}
+EOF
+
+# --- 3. Remove loaders from client/src/App.tsx ---
+echo "✅ 3/5: Removing loaders from client/src/App.tsx..."
+cat << 'EOF' > client/src/App.tsx
+// client/src/App.tsx
+import { Outlet } from 'react-router-dom';
+import IndexPage from './routes/IndexPage';
+import ValidatePage, { action as validateAction } from './routes/ValidatePage';
+
+// We remove the `loader` prop entirely. Data fetching is now done inside the components.
+export const routes = [
+  {
+    id: 'root',
+    path: '/',
+    element: <Layout />,
+    children: [
+      {
+        id: 'index',
+        index: true,
+        element: <IndexPage />,
+      },
+      {
+        id: 'validate',
+        path: 'validate/:id',
+        action: validateAction, // Actions still work perfectly!
+        element: <ValidatePage />,
+      }
+    ],
+  },
+];
+
+function Layout() {
+  return (
+    <div className="app-layout">
+      <Outlet />
+    </div>
+  );
+}
+EOF
+
+# --- 4. Refactor client/src/routes/IndexPage.tsx for client-side fetching ---
+echo "✅ 4/5: Refactoring client/src/routes/IndexPage.tsx..."
+cat << 'EOF' > client/src/routes/IndexPage.tsx
+// client/src/routes/IndexPage.tsx
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+
+export interface DocumentInfo {
+  id: number;
+  filename: string;
+  status: 'source' | 'in_progress' | 'validated';
+}
+
+export default function IndexPage() {
+  const [files, setFiles] = useState<DocumentInfo[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // This effect runs once when the component mounts in the browser.
+    fetch('/api/documents')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Failed to fetch documents from server.');
+        }
+        return res.json();
+      })
+      .then(data => setFiles(data))
+      .catch(err => {
+        console.error(err);
+        setError(err.message);
+      });
+  }, []); // The empty dependency array means it runs only once.
+
+  if (error) {
+    return <div className="container"><h1>Error</h1><p>{error}</p></div>;
+  }
+
+  if (files === null) {
+    return <div className="container"><h1>Loading...</h1></div>;
+  }
+
+  return (
+    <div className="container">
+      <h1>Transcription Validation</h1>
+      <p>Select a file to validate. Status will be shown.</p>
+      <ul>
+        {files.length > 0 ? (
+          files.map(file => (
+            <li key={file.id}>
+              <Link to={`/validate/${file.id}`}>{file.filename}</Link>
+              {file.status === 'validated' && <span className="validated-check">Validated ✓</span>}
+              {file.status === 'in_progress' && <span className="status-progress">In Progress...</span>}
+            </li>
+          ))
+        ) : (
+          <li>No JSON files found in the database. Run `pnpm run seed` to populate it.</li>
+        )}
+      </ul>
+    </div>
+  );
+}
+EOF
+
+# --- 5. Refactor client/src/routes/ValidatePage.tsx for client-side fetching ---
+echo "✅ 5/5: Refactoring client/src/routes/ValidatePage.tsx..."
+# This is a big one. We replace the `useLoaderData` with a `useState`/`useEffect` pattern.
+# First, let's back it up just in case.
+cp client/src/routes/ValidatePage.tsx client/src/routes/ValidatePage.tsx.bak
+
+cat << 'EOF' > client/src/routes/ValidatePage.tsx
 // client/src/routes/ValidatePage.tsx
 import React, { useState, useEffect, useRef, useReducer } from 'react';
 import { useFetcher, Link, useNavigate, useParams } from 'react-router-dom';
@@ -222,3 +433,9 @@ function historyReducer(state: State, action: Action): State {
             return { past: [], present: action.payload, future: [] };
     }
 }
+EOF
+
+echo "🎉 All files updated for the new client-side data-fetching architecture!"
+echo "➡️  Please restart your dev servers. The application should now work reliably."
+echo "   - In one terminal: pnpm run dev:server"
+echo "   - In another terminal: pnpm run dev:client"

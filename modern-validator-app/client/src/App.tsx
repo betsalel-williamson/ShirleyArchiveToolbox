@@ -1,21 +1,24 @@
+// client/src/App.tsx
 import { Outlet } from 'react-router-dom';
-import IndexPage, { loader as indexLoader } from './routes/IndexPage';
-import ValidatePage, { loader as validateLoader, action as validateAction } from './routes/ValidatePage';
+import IndexPage from './routes/IndexPage';
+import ValidatePage, { action as validateAction } from './routes/ValidatePage';
 
+// We remove the `loader` prop entirely. Data fetching is now done inside the components.
 export const routes = [
   {
+    id: 'root',
     path: '/',
     element: <Layout />,
     children: [
       {
+        id: 'index',
         index: true,
-        loader: indexLoader,
         element: <IndexPage />,
       },
       {
+        id: 'validate',
         path: 'validate/:id',
-        loader: validateLoader,
-        action: validateAction,
+        action: validateAction, // Actions still work perfectly!
         element: <ValidatePage />,
       }
     ],

@@ -1,4 +1,6 @@
-import { useLoaderData, Link } from 'react-router-dom';
+// client/src/routes/IndexPage.tsx
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 export interface DocumentInfo {
   id: number;
@@ -6,15 +8,33 @@ export interface DocumentInfo {
   status: 'source' | 'in_progress' | 'validated';
 }
 
-export async function loader() {
-  const res = await fetch('http://localhost:5173/api/documents');
-  if (!res.ok) throw new Error('Failed to fetch documents');
-  const documents: DocumentInfo[] = await res.json();
-  return documents;
-}
-
 export default function IndexPage() {
-  const files = useLoaderData() as DocumentInfo[];
+  const [files, setFiles] = useState<DocumentInfo[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // This effect runs once when the component mounts in the browser.
+    fetch('/api/documents')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Failed to fetch documents from server.');
+        }
+        return res.json();
+      })
+      .then(data => setFiles(data))
+      .catch(err => {
+        console.error(err);
+        setError(err.message);
+      });
+  }, []); // The empty dependency array means it runs only once.
+
+  if (error) {
+    return <div className="container"><h1>Error</h1><p>{error}</p></div>;
+  }
+
+  if (files === null) {
+    return <div className="container"><h1>Loading...</h1></div>;
+  }
 
   return (
     <div className="container">
@@ -30,7 +50,7 @@ export default function IndexPage() {
             </li>
           ))
         ) : (
-          <li>No JSON files found in the database. Run `npm run seed` to populate it.</li>
+          <li>No JSON files found in the database. Run `pnpm run seed` to populate it.</li>
         )}
       </ul>
     </div>

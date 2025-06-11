@@ -4,22 +4,42 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --loader ts-node/esm --experimental-specifier-resolution=node ./server.ts",
-    "build": "npm run build --prefix client && npm run build --prefix server",
+    "setup": "pnpm install",
+    "clean": "rimraf node_modules client/node_modules server/node_modules server/dist pnpm-lock.yaml *.sqlite",
+    "build:client": "pnpm --prefix client build",
+    "build:server": "pnpm --prefix server build",
+    "build": "pnpm build:client && pnpm build:server",
     "start": "NODE_ENV=production node ./server/dist/server.js",
-    "seed": "node --loader ts-node/esm --experimental-specifier-resolution=node ./server/src/seed.ts"
+    "dev:server:watch-compile": "pnpm --prefix server build -- --watch",
+    "dev:server:watch-run": "nodemon ./server/dist/server.js",
+    "dev:client": "pnpm --prefix client dev",
+    "dev:server": "tsx ./server/src/server.ts",
+    "seed": "tsx ./server/src/seed.ts"
   },
   "dependencies": {
+    "better-sqlite3": "^11.10.0",
     "express": "^4.18.2",
-    "sequelize": "^6.35.2",
-    "sqlite3": "^5.1.7",
+    "kysely": "^0.28.2",
     "vite": "^5.0.10"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^4.17.21",
     "@types/node": "^20.10.6",
     "concurrently": "^8.2.2",
+    "nodemon": "^3.1.10",
+    "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.1",
     "typescript": "^5.3.3"
+  },
+  "tsx": {
+    "watch": true,
+    "ignore": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/*.sqlite*",
+      "client/**"
+    ]
   }
 }
