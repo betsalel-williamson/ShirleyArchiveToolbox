@@ -20,7 +20,7 @@ def order_points(pts):
 def main():
     # --- 1. Argument Parser ---
     ap = argparse.ArgumentParser(
-        description="Auto-crop by creating a bounding box around aspect-ratio-filtered content."
+        description="Auto-crop using Connected Components to filter content blobs."
     )
     ap.add_argument("-i", "--image", required=True, help="Path to the input image")
     ap.add_argument(
@@ -63,73 +63,68 @@ def main():
     closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
     cv2.imwrite(output_path.replace(".jpg", "_closed.jpg"), closed)
 
-    # --- 4. Find all content blobs and filter them ---
-    print(
-        "[INFO] Finding and filtering content blobs using Aspect Ratio to create a 'point cloud'..."
+    # --- 4. *** NEW: Filter blobs using Connected Components Analysis ***
+    print("[INFO] Filtering blobs by size using Connected Components Analysis...")
+    # Find all connected components and their stats
+    num_labels, labels_im, stats, centroids = cv2.connectedComponentsWithStats(
+        closed, connectivity=8
     )
+
+    # Create a new, clean image to draw the filtered components onto
+    cleaned_image = np.zeros_like(closed)
+
+    # Define minimum dimensions for a blob to be kept
+    min_width = 3
+    min_height = 3
+
+    # Loop over all components, starting from 1 (0 is the background)
+    for i in range(1, num_labels):
+        w = stats[i, cv2.CC_STAT_WIDTH]
+        h = stats[i, cv2.CC_STAT_HEIGHT]
+
+        # If the component meets the size criteria, add it to the clean image
+        if w > min_width and h > min_height:
+            # Create a mask for the current component
+            component_mask = (labels_im == i).astype("uint8") * 255
+            # Add the valid component to our final mask
+            cleaned_image = cv2.bitwise_or(cleaned_image, component_mask)
+
+    cv2.imwrite(output_path.replace(".jpg", "_cleaned.jpg"), cleaned_image)
+    print("[DEBUG] Saved the cleaned binary image for inspection.")
+
+    # --- 5. Find Contours on the CLEANED image ---
+    print("[INFO] Finding contours on the cleaned image...")
+    # Now find contours on the cleaned image, which contains only "good" blobs
     contours, _ = cv2.findContours(
-        closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        cleaned_image.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
 
-    # *** NEW: Aspect Ratio Filtering Logic ***
-    contour_area_threshold = 100
-    aspect_ratio_threshold = 5.0  # Keep contours that are no more than 5x wider than tall, or 5x taller than wide.
-    all_contour_points = []
-
-    for c in contours:
-        # Get the non-rotated bounding box
-        x, y, w, h = cv2.boundingRect(c)
-
-        # Calculate aspect ratio, handle division by zero
-        aspect_ratio = float(w) / h if h > 0 else 0
-
-        # Apply area and aspect ratio filters
-        if cv2.contourArea(c) > contour_area_threshold:
-            # Check if aspect ratio is within a reasonable range
-            if (aspect_ratio > 1 / aspect_ratio_threshold) and (
-                aspect_ratio < aspect_ratio_threshold
-            ):
-                all_contour_points.append(c)
-            else:
-                print(f"[DEBUG] Filtering out contour with aspect ratio: {aspect_ratio:.2f}")
-
-    if not all_contour_points:
+    if not contours:
         print(
-            "[ERROR] No significant content contours found after filtering. "
-            "Try adjusting blur, Canny, or filter thresholds."
+            "[ERROR] No contours remained after filtering. "
+            "Try adjusting the min_width/min_height thresholds or the morphological kernel."
         )
         return
 
-    point_cloud = np.vstack(all_contour_points)
+    point_cloud = np.vstack(contours)
 
-    # --- 5. Find the Bounding Box of the Point Cloud ---
-    print(
-        "[INFO] Calculating the tightest rotated bounding box for the filtered content..."
-    )
+    # --- 6. Find the Bounding Box of the Point Cloud ---
+    print("[INFO] Calculating the tightest rotated bounding box for the content...")
     rect = cv2.minAreaRect(point_cloud)
     box = cv2.boxPoints(rect)
     box = np.int32(box)
 
-    if box.size == 0:
-        print(
-            "[ERROR] Could not determine a valid bounding box from the filtered contours."
-        )
-        return
-
     ordered_pts = order_points(box)
 
-    # --- 6. Visualization ---
+    # --- 7. Visualization ---
     print("[INFO] Found document boundary. Saving visualization...")
     detected_path = output_path.replace(".jpg", "_detected.jpg")
     cv2.drawContours(orig_image, [box], 0, (0, 255, 0), 5)
     for point in ordered_pts:
         cv2.circle(orig_image, tuple(point.astype(int)), 15, (0, 0, 255), -1)
     cv2.imwrite(detected_path, orig_image)
-    print(f"[INFO] Saved detection visualization to {detected_path}")
 
-    # --- 7. Apply Perspective Transform ---
-    (tl, tr, br, bl) = ordered_pts
-
+    # --- 8. Apply Perspective Transform ---
     dst = np.array(
         [
             [0, 0],
@@ -139,10 +134,8 @@ def main():
         ],
         dtype="float32",
     )
-
     M = cv2.getPerspectiveTransform(ordered_pts, dst)
     warped = cv2.warpPerspective(orig_image, M, (FINAL_WIDTH, FINAL_HEIGHT))
-
     cv2.imwrite(output_path, warped)
     print(f"[SUCCESS] Cropped and straightened image saved to {output_path}")
 
