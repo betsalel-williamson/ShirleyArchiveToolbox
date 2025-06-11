@@ -10,16 +10,15 @@ def order_points(pts):
     """
     rect = np.zeros((4, 2), dtype="float32")
 
-    # The top-left point will have the smallest sum (x+y)
+    # The top-left point has the smallest sum (x+y)
     s = pts.sum(axis=1)
     rect[0] = pts[np.argmin(s)]
 
-    # The bottom-right point will have the largest sum (x+y)
+    # The bottom-right point has the largest sum (x+y)
     rect[2] = pts[np.argmax(s)]
 
-    # The top-right point will have the largest difference (x-y)
-    # The bottom-left will have the smallest difference (x-y)
-    # Note: np.diff is y-x, so we find min for top-right and max for bottom-left
+    # The top-right has the minimum difference (y-x)
+    # The bottom-left has the maximum difference (y-x)
     diff = np.diff(pts, axis=1)
     rect[1] = pts[np.argmin(diff)]
     rect[3] = pts[np.argmax(diff)]
@@ -53,10 +52,20 @@ def main():
     image = cv2.resize(image, (int(image.shape[1] / ratio), 500))
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edged = cv2.Canny(blurred, 75, 200)
+
+    # *** KEY CHANGE 1: INCREASED BLUR ***
+    # A larger blur kernel helps to remove high-frequency noise like handwriting.
+    print("[INFO] Applying increased blur to suppress text noise...")
+    blurred = cv2.GaussianBlur(gray, (11, 11), 0)
+
+    edged = cv2.Canny(
+        blurred, 50, 150
+    )  # Adjusted Canny thresholds slightly for the blur
 
     print("[INFO] STEP 1: Edge Detection complete.")
+    # For debugging, let's save the edge-detected image
+    edged_path = output_path.replace(".jpg", "_edged.jpg").replace(".png", "_edged.png")
+    cv2.imwrite(edged_path, edged)
 
     # --- 3. Find the Document Contour ---
     print("[INFO] STEP 2: Finding document contour...")
@@ -69,30 +78,44 @@ def main():
         print("[ERROR] No contours found. Check Canny edge detection parameters.")
         return
 
-    # Assume the largest contour is the document
+    # Sort contours by area in descending order
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    document_contour = contours[0]
 
-    # *** THIS IS THE MAJOR CHANGE ***
-    # Instead of approximating the polygon, we find the extreme corner points
-    # of the largest contour. This is robust to occlusions like hands.
-    print("[INFO] STEP 3: Found largest contour. Identifying extreme corner points...")
+    document_contour = None
+    image_area = image.shape[0] * image.shape[1]
+
+    # *** KEY CHANGE 2: MINIMUM AREA FILTER ***
+    # Loop through contours and find the first one that is a plausible size.
+    for c in contours:
+        if cv2.contourArea(c) > image_area * 0.20:  # Must be at least 20% of image
+            document_contour = c
+            break
+
+    if document_contour is None:
+        print("[ERROR] No contour found that meets the minimum size requirement.")
+        print(
+            "[DEBUG] This means no object occupying at least 20% of the image area was detected."
+        )
+        return
+
+    print(
+        "[INFO] STEP 3: Found a sufficiently large contour. Identifying extreme corner points..."
+    )
     ordered_pts_resized = order_points(document_contour.reshape(-1, 2))
 
     # For visualization, draw the found contour and corners on the resized image
     detected_path = output_path.replace(".jpg", "_detected.jpg").replace(
         ".png", "_detected.png"
     )
-    # Draw the full contour
-    cv2.drawContours(image, [document_contour], -1, (0, 255, 0), 2)
-    # Draw circles on the identified corners
+    cv2.drawContours(image, [document_contour], -1, (0, 255, 0), 3)  # Thicker line
     for point in ordered_pts_resized:
-        cv2.circle(image, tuple(point.astype(int)), 5, (0, 0, 255), -1)
+        cv2.circle(
+            image, tuple(point.astype(int)), 7, (0, 0, 255), -1
+        )  # Bigger circles
     cv2.imwrite(detected_path, image)
     print(f"[INFO] Saved detection visualization to {detected_path}")
 
     # --- 4. Apply Perspective Transform and Crop ---
-    # Scale the corner points back to the original image size
     ordered_pts = ordered_pts_resized * ratio
     (tl, tr, br, bl) = ordered_pts
 
