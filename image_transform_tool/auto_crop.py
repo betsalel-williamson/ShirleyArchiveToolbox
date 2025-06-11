@@ -20,7 +20,7 @@ def order_points(pts):
 def main():
     # --- 1. Argument Parser ---
     ap = argparse.ArgumentParser(
-        description="Auto-crop using local window filtering to clean the binary mask."
+        description="Auto-crop using erosion-based filtering to remove thin lines."
     )
     ap.add_argument("-i", "--image", required=True, help="Path to the input image")
     ap.add_argument(
@@ -63,55 +63,40 @@ def main():
     closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
     cv2.imwrite(output_path.replace(".jpg", "_closed.jpg"), closed)
 
-    # --- 4. *** NEW: Local Filtering with a Sliding Window ***
-    print("[INFO] Applying local thickness filter with a sliding window...")
-    (h_img, w_img) = closed.shape
-    step_size = 4
-    window_size = 4
-    min_thickness = 3
+    # --- 4. *** NEW: Filter thin lines using Erosion ***
+    print("[INFO] Filtering thin lines via erosion...")
+    # Create a kernel for erosion. A 3x3 kernel will remove lines of 1 or 2 pixels thick.
+    erosion_kernel = np.ones((12, 12), np.uint8)
 
-    # Create a new, clean image to draw the filtered components onto
-    cleaned_image = np.zeros_like(closed)
+    # Erode the image - this will make thin lines disappear
+    eroded_image = cv2.erode(closed, erosion_kernel, iterations=1)
+    cv2.imwrite(output_path.replace(".jpg", "_eroded.jpg"), eroded_image)
 
-    # Iterate through the image with a sliding window
-    for y in range(0, h_img - window_size, step_size):
-        for x in range(0, w_img - window_size, step_size):
-            # Extract the window (Region of Interest)
-            roi = closed[y : y + window_size, x : x + window_size]
-
-            # If there are no white pixels in the window, skip it
-            if cv2.countNonZero(roi) == 0:
-                continue
-
-            # Find contours within this small window
-            contours, _ = cv2.findContours(roi, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-
-            is_thick_enough = False
-            for c in contours:
-                # Check the bounding box of the contour piece inside the window
-                _, _, w_roi, h_roi = cv2.boundingRect(c)
-                if w_roi > min_thickness and h_roi > min_thickness:
-                    is_thick_enough = True
-                    break  # Found a thick enough piece, no need to check others in this window
-
-            # If a thick enough piece was found, copy this window to the cleaned image
-            if is_thick_enough:
-                cleaned_image[y : y + window_size, x : x + window_size] = roi
-
-    cv2.imwrite(output_path.replace(".jpg", "_cleaned.jpg"), cleaned_image)
-    print("[DEBUG] Saved the locally filtered binary image for inspection.")
-
-    # --- 5. Find Contours on the CLEANED image ---
-    print("[INFO] Finding contours on the cleaned image...")
+    # Find the contours of the surviving "thick" blobs
     contours, _ = cv2.findContours(
-        cleaned_image.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    # Create a new mask to reconstruct the full shape of the thick blobs
+    cleaned_mask = np.zeros_like(closed)
+    # Draw the full contours that survived onto the new mask
+    # We find these contours in the original 'closed' image by checking which ones contain the eroded blobs.
+    # A simpler and effective approach is to just use the eroded contours as seeds and dilate them back a bit.
+
+    # Dilate the eroded image to regain some of the lost shape of the thick blobs
+    # The number of iterations should match the erosion iterations
+    reconstructed_image = cv2.dilate(eroded_image, erosion_kernel, iterations=1)
+    cv2.imwrite(output_path.replace(".jpg", "_reconstructed.jpg"), reconstructed_image)
+    print("[DEBUG] Saved eroded and reconstructed images for inspection.")
+
+    # --- 5. Find Contours on the RECONSTRUCTED image ---
+    print("[INFO] Finding contours on the reconstructed (cleaned) image...")
+    contours, _ = cv2.findContours(
+        reconstructed_image.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
 
     if not contours:
-        print(
-            "[ERROR] No contours remained after local filtering. "
-            "Try adjusting window_size, step_size, or min_thickness."
-        )
+        print("[ERROR] No contours remained after erosion filtering.")
         return
 
     point_cloud = np.vstack(contours)
