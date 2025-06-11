@@ -16,20 +16,11 @@ const vitestConfig: VitestUserConfigInterface = {
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    port: 3000,
-    // Proxy API requests to the backend server
-    proxy: {
-      "/api": {
-        target: "http://localhost:7456",
-        changeOrigin: true,
-      },
-      "/public": {
-        target: "http://localhost:7456",
-        changeOrigin: true,
-      }
-    },
-  },
+  // The 'server' block with proxy settings has been removed.
+  // In our integrated SSR development setup, the Express server (server.ts)
+  // handles all requests, including API calls. The Vite server runs in
+  // middleware mode and does not need to proxy requests. This was causing
+  // the ECONNREFUSED error.
   build: {
     minify: false,
   },

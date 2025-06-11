@@ -166,7 +166,7 @@ const ValidatePage: React.FC = () => {
                     onRevert={handleRevert}
                 />
                 <ImagePane
-                    imageSrc={`/public/images/${data.image_source}`}
+                    imageSrc={`/images/${data.image_source}`}
                     annotations={data.annotations || []}
                     transformation={state.trans}
                     onTransformationChange={(newTrans) => setState({ ...state, trans: newTrans })}

@@ -73,7 +73,6 @@ async function createServer() {
   const port = process.env.PORT || 7456;
   app.listen(Number(port), "0.0.0.0", () => {
     console.log(`✅ Server is listening on http://localhost:${port}`);
-    console.log(`Proxy for Vite dev server is set up at http://localhost:3000`);
   });
 }
 
