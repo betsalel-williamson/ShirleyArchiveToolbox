@@ -1,43 +1,36 @@
 import express from 'express';
-import { matchRoutes } from 'react-router-config';
+import { matchPath } from 'react-router-dom';
 import compression from 'compression';
 import fs from 'fs';
 import path from 'path';
 import cors from 'cors';
 
 import render from './renderer';
-import RoutesConfig from '../client/router/RoutesConfig';
 import createNewStore from '../store/createStore';
 import apiRouter from './api';
+import RoutesConfig from '../client/router/LegacyRoutes'; // We'll create a temp legacy config for data fetching
 
 const port = process.env.PORT || 3000;
 const app = express();
 
-// Middleware
 app.use(compression());
 app.use(cors({ origin: '*' }));
 app.use(express.static('public'));
 app.use(express.static('dist'));
 
-// API routes
 app.use('/api', apiRouter);
 app.use('/static/images', express.static(path.resolve(__dirname, '../../data/images')));
 
-
-// SSR catch-all
 app.get('*', (req, res) => {
     const store = createNewStore();
-    const matchedRoutes = matchRoutes(RoutesConfig, req.path);
 
-    const promises = matchedRoutes.map(({ route }) => {
-        if (route.component && (route.component as any).appSyncRequestFetching) {
-            const storeAPI = { ...store, path: req.path };
-            return (route.component as any).appSyncRequestFetching(storeAPI);
-        }
-        return null;
-    }).flat().filter(p => p); // Flatten and remove nulls
+    // Find matching routes to trigger data fetching
+    const matchedRoute = RoutesConfig.find(route => matchPath(req.path, route));
+    const promises = matchedRoute && (matchedRoute.component as any).appSyncRequestFetching
+        ? (matchedRoute.component as any).appSyncRequestFetching({ ...store, path: req.path })
+        : [];
 
-    Promise.all(promises).then(() => {
+    Promise.all(promises.filter(Boolean)).then(() => {
         const indexFile = path.resolve('./public/index.html');
         fs.readFile(indexFile, 'utf8', (err, template) => {
             if (err) {
@@ -59,5 +52,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`✅ Server is running on port ${port}, access http://localhost:${port}`);
+    console.log(`✅ Server is running on port ${port}`);
 });

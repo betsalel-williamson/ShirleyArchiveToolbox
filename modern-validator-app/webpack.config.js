@@ -19,7 +19,8 @@ module.exports = {
     filename: '[name].js'
   },
   resolve: {
-    extensions: ['.js', '.jsx', '.ts', '.tsx', '.scss'],
+    // THIS IS THE FIX: Tell Webpack to try these extensions when resolving modules
+    extensions: ['.ts', '.tsx', '.js', '.jsx', '.scss'],
     alias: {
       '@/components': path.resolve(__dirname, './src/client/components'),
       '@/views': path.resolve(__dirname, './src/client/views'),
