@@ -11,7 +11,10 @@ const ValidatePage: React.FC = () => {
     const { json_filename } = useParams<{ json_filename: string }>();
     const navigate = useNavigate();
 
-    const [data, setData] = useState<ValidationData | null>(null);
+    // This state holds the original, unmodified data structure, used as a base.
+    const [baseData, setBaseData] = useState<ValidationData | null>(null);
+    const [annotations, setAnnotations] = useState<Annotation[]>([]);
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [autosaveStatus, setAutosaveStatus] = useState({ message: '', type: ''});
@@ -31,16 +34,17 @@ const ValidatePage: React.FC = () => {
 
     const debouncedState = useDebounce(state, 1000);
 
-    const getInitialState = (initialData: ValidationData) => {
+    const initializeStates = (initialData: ValidationData) => {
         let wordCounter = 0;
-        const annotations: Annotation[] = [];
+        const processedAnnotations: Annotation[] = [];
         const initialTexts: TextState = {};
 
         initialData.lines.forEach((line, line_idx) => {
             line.words.forEach((word, word_idx) => {
                 const wordId = word.id || `${line_idx}_${word_idx}`;
-                word.id = wordId; // Ensure ID exists on original data object
-                annotations.push({
+                word.id = wordId;
+
+                processedAnnotations.push({
                     ...word,
                     id: wordId,
                     display_id: wordCounter + 1,
@@ -50,15 +54,16 @@ const ValidatePage: React.FC = () => {
             });
         });
 
-        setData({ ...initialData, annotations });
+        setBaseData(initialData);
+        setAnnotations(processedAnnotations);
+
         const initialState = {
             trans: { offsetX: 0, offsetY: 0, rotation: 0, scale: 1.0 },
             texts: initialTexts
         };
-        setState(initialState, true); // Set initial state without adding to history
+        resetState(initialState);
     };
 
-    // Fetch initial data
     useEffect(() => {
         if (!json_filename) return;
         setLoading(true);
@@ -68,27 +73,27 @@ const ValidatePage: React.FC = () => {
                 return res.json();
             })
             .then((initialData: ValidationData) => {
-                getInitialState(initialData);
+                initializeStates(initialData);
                 setError(null);
             })
             .catch(err => setError(err.message))
             .finally(() => setLoading(false));
-    }, [json_filename]);
+    }, [json_filename, resetState]);
 
     const autoSave = useCallback(async (currentState: { trans: TransformationState, texts: TextState }) => {
-        if (!json_filename || !data) return;
+        if (!json_filename || !baseData) return;
 
         setAutosaveStatus({ message: "Saving...", type: "status-progress" });
 
-        const formData = new FormData();
-        formData.append('json_data', JSON.stringify(data));
+        const formData = new URLSearchParams();
         Object.entries(currentState.trans).forEach(([key, value]) => formData.append(key, value.toString()));
         Object.entries(currentState.texts).forEach(([key, value]) => formData.append(`text_${key}`, value));
 
         try {
             const response = await fetch(`/api/autosave/${json_filename}`, {
-                method: 'POST',
-                body: new URLSearchParams(formData as any),
+                method: 'PATCH', // Using PATCH for partial updates
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData,
             });
             if (!response.ok) throw new Error("Autosave failed on server");
             setAutosaveStatus({ message: "Draft Saved ✓", type: "status-validated" });
@@ -96,14 +101,13 @@ const ValidatePage: React.FC = () => {
             setAutosaveStatus({ message: "Save Failed!", type: "status-error" });
             console.error(err);
         }
-    }, [json_filename, data]);
+    }, [json_filename, baseData]);
 
-    // Autosave on debounced state change
     useEffect(() => {
-        if (debouncedState) {
+        if (debouncedState && (canUndo || canRedo)) {
             autoSave(debouncedState);
         }
-    }, [debouncedState, autoSave]);
+    }, [debouncedState, autoSave, canUndo, canRedo]);
 
 
     const handleRevert = async () => {
@@ -115,25 +119,26 @@ const ValidatePage: React.FC = () => {
             if (!response.ok) throw new Error('Failed to fetch source data.');
 
             const sourceData = await response.json();
-            getInitialState(sourceData); // This resets state and data
-            // The autosave effect will then trigger with the clean state.
+            initializeStates(sourceData);
+            const sourceTexts = sourceData.lines.flatMap((l: any) => l.words).reduce((acc: any, w: any) => ({...acc, [w.id]: w.text}), {});
+            await autoSave({ trans: { offsetX: 0, offsetY: 0, rotation: 0, scale: 1.0 }, texts: sourceTexts });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unknown error during revert.');
         }
     };
 
     const handleCommit = async () => {
-        if (!json_filename || !data) return;
+        if (!json_filename || !baseData) return;
 
-        const formData = new FormData();
-        formData.append('json_data', JSON.stringify(data));
+        const formData = new URLSearchParams();
         Object.entries(state.trans).forEach(([key, value]) => formData.append(key, value.toString()));
         Object.entries(state.texts).forEach(([key, value]) => formData.append(`text_${key}`, value));
 
         try {
             const response = await fetch(`/api/commit/${json_filename}`, {
-                method: 'POST',
-                body: new URLSearchParams(formData as any),
+                method: 'PATCH', // Using PATCH for partial updates
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData,
             });
             if (!response.ok) throw new Error("Commit failed on server");
             const result = await response.json();
@@ -148,10 +153,9 @@ const ValidatePage: React.FC = () => {
         }
     };
 
-
     if (loading) return <div className="p-8 text-xl">Loading...</div>;
     if (error) return <div className="p-8 text-xl text-red-500">Error: {error}</div>;
-    if (!data) return <div className="p-8 text-xl">No data found.</div>;
+    if (!baseData) return <div className="p-8 text-xl">No data found.</div>;
 
     return (
         <div className="flex h-screen bg-gray-50">
@@ -166,15 +170,15 @@ const ValidatePage: React.FC = () => {
                     onRevert={handleRevert}
                 />
                 <ImagePane
-                    imageSrc={`/images/${data.image_source}`}
-                    annotations={data.annotations || []}
+                    imageSrc={`/public/images/${baseData.image_source}`}
+                    annotations={annotations}
                     transformation={state.trans}
                     onTransformationChange={(newTrans) => setState({ ...state, trans: newTrans })}
                 />
             </div>
             <div className="w-1/3 max-w-md h-full flex flex-col border-l border-gray-200 bg-white">
                 <FormPane
-                    annotations={data.annotations || []}
+                    annotations={annotations}
                     textState={state.texts}
                     onTextChange={(wordId, newText) => setState({ ...state, texts: { ...state.texts, [wordId]: newText } })}
                     autosaveStatus={autosaveStatus}

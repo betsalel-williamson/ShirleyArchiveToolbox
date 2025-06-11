@@ -5,7 +5,7 @@ import express from "express";
 import compression from "compression";
 import cors from "cors";
 import { createServer as createViteServer } from "vite";
-import apiRouter from "./src/server/api.js";
+import apiRouter from "./src/server/api";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -24,6 +24,8 @@ async function createServer() {
   app.use(vite.middlewares);
 
   app.use(cors());
+  // Removed the { limit: '50mb' } configuration.
+  // The default limit is sufficient now that we send small PATCH deltas.
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 

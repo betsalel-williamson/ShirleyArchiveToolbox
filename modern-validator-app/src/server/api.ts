@@ -47,10 +47,15 @@ router.get("/files/:json_filename", async (req: Request, res: Response) => {
 
 
 // Route to autosave progress
-router.post("/autosave/:json_filename", async (req: Request, res: Response) => {
+router.patch("/autosave/:json_filename", async (req: Request, res: Response) => {
     const { json_filename } = req.params;
     try {
-        const transformedData = applyTransformationsToData(req.body);
+        const baseData = await loadData(json_filename);
+        if (!baseData) {
+            return res.status(404).json({ error: "Cannot autosave, base file not found."});
+        }
+
+        const transformedData = applyTransformationsToData(baseData, req.body);
         const savePath = path.join(IN_PROGRESS_DATA_DIR, json_filename);
         await fs.writeFile(savePath, JSON.stringify(transformedData, null, 2));
         res.json({ status: "ok", message: "Draft saved." });
@@ -61,10 +66,15 @@ router.post("/autosave/:json_filename", async (req: Request, res: Response) => {
 });
 
 // Route to commit final changes
-router.post("/commit/:json_filename", async (req: Request, res: Response) => {
+router.patch("/commit/:json_filename", async (req: Request, res: Response) => {
     const { json_filename } = req.params;
     try {
-        const transformedData = applyTransformationsToData(req.body);
+        const baseData = await loadData(json_filename);
+        if (!baseData) {
+            return res.status(404).json({ error: "Cannot commit, base file not found." });
+        }
+
+        const transformedData = applyTransformationsToData(baseData, req.body);
         transformedData.validated = true;
 
         const validatedPath = path.join(VALIDATED_DATA_DIR, json_filename);
@@ -73,8 +83,8 @@ router.post("/commit/:json_filename", async (req: Request, res: Response) => {
         const inProgressPath = path.join(IN_PROGRESS_DATA_DIR, json_filename);
         try {
             await fs.unlink(inProgressPath);
-        } catch (e) {
-            // Ignore if file doesn't exist
+        } catch (e: any) {
+            if (e.code !== 'ENOENT') console.error(`Could not remove in-progress file: ${e.message}`);
         }
 
         const allFiles = await getJsonFiles();
