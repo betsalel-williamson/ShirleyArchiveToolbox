@@ -5,8 +5,7 @@ import argparse
 
 def order_points(pts):
     """
-    Takes a set of points and finds the top-left, top-right,
-    bottom-right, and bottom-left corners among them.
+    Takes a set of points and orders them: top-left, top-right, bottom-right, bottom-left.
     """
     rect = np.zeros((4, 2), dtype="float32")
     s = pts.sum(axis=1)
@@ -18,21 +17,17 @@ def order_points(pts):
     return rect
 
 
-def validate_dimensions(contour, expected_width, expected_height, tolerance=0.15):
+def validate_dimensions(
+    contour, expected_width, expected_height, tolerance=0.20
+):  # Increased tolerance
     """
-    Checks if the dimensions of a contour match the expected physical dimensions
-    of the diary within a given tolerance.
+    Checks if the dimensions of a contour match the expected physical dimensions.
     """
-    # Get the minimum area rectangle that encloses the contour
     rect = cv2.minAreaRect(contour)
-    # The dimensions of this rectangle are a good approximation of the object's size
     (width, height) = rect[1]
-
-    # The rectangle might be oriented as width x height or height x width
-    dim1, dim2 = sorted((width, height))  # Smallest and largest dimension
+    dim1, dim2 = sorted((width, height))
     exp_dim1, exp_dim2 = sorted((expected_width, expected_height))
 
-    # Check if the measured dimensions are within the tolerance of expected dimensions
     height_ok = (1 - tolerance) * exp_dim1 < dim1 < (1 + tolerance) * exp_dim1
     width_ok = (1 - tolerance) * exp_dim2 < dim2 < (1 + tolerance) * exp_dim2
 
@@ -53,9 +48,9 @@ def validate_dimensions(contour, expected_width, expected_height, tolerance=0.15
 
 
 def main():
-    # --- 1. Set up Argument Parser with New Configuration ---
+    # --- 1. Argument Parser ---
     ap = argparse.ArgumentParser(
-        description="Auto-crop and straighten a document using physical constraints."
+        description="Auto-crop and straighten a document using physical and content-based constraints."
     )
     ap.add_argument("-i", "--image", required=True, help="Path to the input image")
     ap.add_argument(
@@ -80,7 +75,7 @@ def main():
     EXPECTED_WIDTH = args["width"]
     EXPECTED_HEIGHT = args["height"]
 
-    # --- 2. Load and Pre-process the Image ---
+    # --- 2. Load and Pre-process ---
     print("[INFO] Loading image...")
     image = cv2.imread(image_path)
     if image is None:
@@ -88,76 +83,69 @@ def main():
         return
 
     orig_image = image.copy()
-    (H, W) = image.shape[:2]
-
-    # --- 3. Positional Filtering: Create a mask for the central region ---
-    print("[INFO] Applying positional filter to focus on the center of the image...")
-    mask = np.zeros(image.shape[:2], dtype="uint8")
-    # Define the central region (e.g., inner 75% of the image)
-    center_x, center_y = W // 2, H // 2
-    roi_w, roi_h = int(W * 0.75), int(H * 0.85)
-    cv2.rectangle(
-        mask,
-        (center_x - roi_w // 2, center_y - roi_h // 2),
-        (center_x + roi_w // 2, center_y + roi_h // 2),
-        255,
-        -1,
-    )
-
-    # Apply blur and edge detection only within the masked region
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (11, 11), 0)
-    edged = cv2.Canny(blurred, 40, 120)
-    edged = cv2.bitwise_and(edged, edged, mask=mask)  # Keep edges only in the center
+    blurred = cv2.GaussianBlur(
+        gray, (7, 7), 0
+    )  # Slightly less blur to preserve text edges
+    edged = cv2.Canny(blurred, 50, 150)
 
-    # Save the filtered edge map for debugging
-    edged_path = output_path.replace(".jpg", "_edged_filtered.jpg")
-    cv2.imwrite(edged_path, edged)
-    print(f"[DEBUG] Saved filtered edge map to {edged_path}")
+    # --- 3. *** NEW: Morphological Closing to find the text block ***
+    print("[INFO] Applying morphological closing to merge text into a content block...")
+    # A large rectangular kernel to connect lines of text
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (40, 40))
+    closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
 
-    # --- 4. Find and Validate Contour ---
-    print("[INFO] Finding and validating contours based on physical dimensions...")
+    # Save the intermediate steps for debugging
+    cv2.imwrite(output_path.replace(".jpg", "_edged.jpg"), edged)
+    cv2.imwrite(output_path.replace(".jpg", "_closed.jpg"), closed)
+    print("[DEBUG] Saved 'edged' and 'closed' images for inspection.")
+
+    # --- 4. Find Contour of the Content Block ---
+    print("[INFO] Finding contour of the merged content block...")
+    # Find contours in the 'closed' image now
     contours, _ = cv2.findContours(
-        edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
 
     if len(contours) == 0:
-        print("[ERROR] No contours found in the central region.")
+        print("[ERROR] No contours found after morphological closing.")
         return
 
-    # Sort contours by area, but we will validate each one
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
     document_contour = None
 
     for c in contours:
-        # ** NEW: VALIDATE AGAINST PHYSICAL DIMENSIONS **
-        # Note: We do this on the original image scale, so no resizing is needed.
+        # Validate the dimensions of this content blob
         if validate_dimensions(c, EXPECTED_WIDTH, EXPECTED_HEIGHT):
             document_contour = c
-            break  # Found our match
+            break
 
     if document_contour is None:
         print("[ERROR] No contour found that matches the expected physical dimensions.")
         return
 
-    print("[INFO] Found a valid document contour. Identifying extreme corner points...")
-    ordered_pts = order_points(document_contour.reshape(-1, 2))
+    # --- 5. Get Corners from the Rotated Bounding Box ---
+    print(
+        "[INFO] Found a valid content block. Calculating corners from its bounding box..."
+    )
+    # Get the minimum area rectangle, which is more stable than finding extreme points
+    rect = cv2.minAreaRect(document_contour)
+    box = cv2.boxPoints(rect)
+    box = np.int0(box)
 
-    # For visualization, draw on the original image
+    # Now order these 4 box points correctly
+    ordered_pts = order_points(box)
+
+    # Visualization
     detected_path = output_path.replace(".jpg", "_detected.jpg")
-    cv2.drawContours(orig_image, [document_contour], -1, (0, 255, 0), 5)  # Thicker line
+    cv2.drawContours(orig_image, [box], 0, (0, 255, 0), 5)
     for point in ordered_pts:
-        cv2.circle(
-            orig_image, tuple(point.astype(int)), 15, (0, 0, 255), -1
-        )  # Bigger circles
+        cv2.circle(orig_image, tuple(point.astype(int)), 15, (0, 0, 255), -1)
     cv2.imwrite(detected_path, orig_image)
     print(f"[INFO] Saved detection visualization to {detected_path}")
 
-    # --- 5. Apply Perspective Transform and Crop ---
-    # The points are already on the original scale, so no ratio multiplication needed
+    # --- 6. Apply Perspective Transform ---
     (tl, tr, br, bl) = ordered_pts
-
-    # Use the known dimensions for the output image for consistency
     maxWidth = EXPECTED_WIDTH
     maxHeight = EXPECTED_HEIGHT
 
@@ -169,9 +157,7 @@ def main():
     M = cv2.getPerspectiveTransform(ordered_pts, dst)
     warped = cv2.warpPerspective(orig_image, M, (maxWidth, maxHeight))
 
-    print("[INFO] STEP 4: Perspective transform applied.")
-
-    # --- 6. Save the Final Image ---
+    print("[INFO] Perspective transform applied.")
     cv2.imwrite(output_path, warped)
     print(f"[SUCCESS] Cropped and straightened image saved to {output_path}")
 
