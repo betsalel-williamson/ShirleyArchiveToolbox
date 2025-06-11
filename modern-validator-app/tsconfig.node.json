@@ -7,6 +7,7 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "esModuleInterop": true,
+    "jsx": "react",
   },
-  "include": ["vite.config.ts", "server.ts", "postcss.config.cjs", "tailwind.config.cjs"]
+  "include": ["vite.config.ts", "server.ts", "src/server"]
 }

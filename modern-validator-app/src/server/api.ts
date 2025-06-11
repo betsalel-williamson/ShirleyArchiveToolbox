@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, type Router as ExpressRouter } from "express";
 import fs from 'fs/promises';
 import path from 'path';
 import {
@@ -11,7 +11,7 @@ import {
     VALIDATED_DATA_DIR
 } from './utils.js';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 // Route to get the list of all files and their statuses
 router.get("/files", async (req: Request, res: Response) => {
