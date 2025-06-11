@@ -1,5 +1,4 @@
+python-dotenv
 google-cloud-documentai
 Pillow
-google-cloud-aiplatform
-python-dotenv
-vertexai
+google-generativeai
