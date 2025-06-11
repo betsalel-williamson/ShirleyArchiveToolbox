@@ -69,7 +69,6 @@ def main():
         closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
 
-    # Filter out small noise contours and collect all points from the rest
     contour_area_threshold = 100
     all_contour_points = []
     for c in contours:
@@ -82,25 +81,27 @@ def main():
         )
         return
 
-    # Combine all points into a single NumPy array
     point_cloud = np.vstack(all_contour_points)
 
     # --- 5. Find the Bounding Box of the Point Cloud ---
     print("[INFO] Calculating the tightest rotated bounding box for the content...")
-    # Get the minimum area rectangle that encloses the entire point cloud
     rect = cv2.minAreaRect(point_cloud)
     box = cv2.boxPoints(rect)
-    box = np.int0(box)
 
-    # Order the four corners of this new bounding box
+    # *** FIX 1: Use np.int32 instead of the deprecated np.int0 or incorrect np.int8 ***
+    box = np.int32(box)
+
+    # *** FIX 2: Add a check to ensure the box has points before proceeding ***
+    if box.size == 0:
+        print("[ERROR] Could not determine a valid bounding box from the contours.")
+        return
+
     ordered_pts = order_points(box)
 
     # --- 6. Visualization ---
     print("[INFO] Found document boundary. Saving visualization...")
     detected_path = output_path.replace(".jpg", "_detected.jpg")
-    # Draw the combined contour box
     cv2.drawContours(orig_image, [box], 0, (0, 255, 0), 5)
-    # Draw the identified corners
     for point in ordered_pts:
         cv2.circle(orig_image, tuple(point.astype(int)), 15, (0, 0, 255), -1)
     cv2.imwrite(detected_path, orig_image)
@@ -109,7 +110,6 @@ def main():
     # --- 7. Apply Perspective Transform ---
     (tl, tr, br, bl) = ordered_pts
 
-    # Set the destination size to the desired final output dimensions
     dst = np.array(
         [
             [0, 0],
