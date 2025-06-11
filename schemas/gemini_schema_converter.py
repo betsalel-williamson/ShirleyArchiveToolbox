@@ -1,4 +1,4 @@
-# gemini_schema_converter.py
+# gemini_schema_converter.py (v2)
 
 import json
 import copy
@@ -63,15 +63,16 @@ def transform_for_gemini(node, is_root=False):
                 node = other_schemas[0]
                 if is_nullable:
                     node["nullable"] = True
-            # Note: This doesn't handle complex anyOf with more than one non-null type,
-            # as it's not present in the source schema.
+            # Note: This doesn't handle complex anyOf with more than one non-null type.
 
         # 2. Process the (potentially new) node
         processed_node = {}
         for key, value in node.items():
-            # Rule: Remove 'title' field
-            if key == "title":
+            # --- MODIFICATION START ---
+            # Rule: Remove 'title' and 'default' fields as they are not used by Gemini.
+            if key == "title" or key == "default":
                 continue
+            # --- MODIFICATION END ---
 
             # Rule: Remove 'example' field if not at the root
             if key == "example" and not is_root:
@@ -112,13 +113,10 @@ def main():
 
     # --- Phase 1: Resolve all $refs ---
     print("Phase 1: Inlining all $ref definitions...")
-    # The definitions are expected in '$defs' for this schema.
-    # For a more general tool, you might also check 'components/schemas'.
     definitions = openapi_schema.get("$defs", {})
     if not definitions:
         print("Warning: No '$defs' section found in the schema.")
 
-    # Create a working copy to avoid modifying the original dict while iterating
     inlined_schema = copy.deepcopy(openapi_schema)
     inlined_schema = resolve_refs(inlined_schema, definitions)
     print("...$refs resolved.")

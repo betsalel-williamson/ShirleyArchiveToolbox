@@ -1,0 +1,231 @@
+openapi: 3.0.0
+info:
+  title: Diary Archival Schema
+  version: "1.3.0"
+  description: A comprehensive, unified schema for extracting and structuring information from scanned diary pages, designed to be flexible for various diary formats and historical contexts.4
+paths: {}
+
+components:
+  schemas:
+    Diary:
+      type: object
+      description: Represents a single, complete diary document.
+      properties:
+        metadata:
+          $ref: '#/components/schemas/DiaryMetadata'
+        people_index:
+          type: array
+          description: A comprehensive index of all individuals mentioned in the diary.
+          items:
+            $ref: '#/components/schemas/Person'
+        entries:
+          type: array
+          description: A chronological list of all the entries transcribed from the diary.
+          items:
+            $ref: '#/components/schemas/DiaryEntry'
+      required:
+        - metadata
+        - people_index
+        - entries
+
+    DiaryMetadata:
+      type: object
+      description: Metadata about the physical diary itself, its provenance, languages used, and key recurring entities.
+      properties:
+        archive_id:
+          type: string
+          description: The unique identifier for this diary in the archival system.
+          example: "D-1943-SP-001"
+        title:
+          type: string
+          description: The title of the diary, if one is written on the cover (e.g., "My European Tour"). Otherwise, a generated title.
+          example: "TWO (FIVE) YEAR DIARY"
+        author:
+          type: string
+          description: The name of the person who wrote the diary. Can be "Unknown".
+          example: "Shirley Pearl"
+        date_range:
+          type: object
+          properties:
+            start_date:
+              type: string
+              format: date
+              description: The ISO 8601 date of the first entry.
+              example: "1943-01-01"
+            end_date:
+              type: string
+              format: date
+              description: The ISO 8601 date of the last entry.
+              example: "1948-01-05"
+        physical_description:
+          type: string
+          description: A description of the physical object (e.g., "Small leather-bound book, brown cover with gold leaf, spine is damaged.")
+          example: "Brown leather-bound diary, 5x7 inches, with significant water damage on the back cover. Pre-printed 'Five Year Diary' with 'FIVE' crossed out and 'TWO' written above. Pages are cream-colored with purple printed lines."
+        provenance:
+          type: string
+          description: Information about the diary's origin and ownership history.
+          example: "Donated by the estate of Eleanor Vance, granddaughter of the author."
+        primary_language:
+          type: string
+          description: The dominant language used throughout the diary.
+          example: "English"
+        secondary_languages:
+          type: array
+          description: A list of other languages that appear occasionally in the diary.
+          items:
+            type: string
+          example: ["French", "Yiddish"]
+        writing_systems:
+          type: array
+          description: A list of scripts or writing systems used, including any identified shorthand.
+          items:
+            type: string
+          example: ["Cursive", "Gregg Shorthand"]
+        language:
+          type: string
+          description: The primary language of the diary.
+          example: "English"
+        key_entities:
+          type: array
+          description: A list of significant recurring organizations, groups, or concepts mentioned in the diary.
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "Arcadettes"
+              type:
+                type: string
+                enum: [Organization, Club, Publication, Event, Other]
+                example: "Club"
+              description:
+                type: string
+                example: "A social club the author and her friends (like Lilly and Dody) are members of."
+
+    Person:
+      type: object
+      description: A comprehensive profile for a single person mentioned in the diary, consolidating all references.
+      properties:
+        person_id:
+          type: string
+          description: "A unique, internally generated ID for this person (e.g., 'person-001'). Useful for database linking."
+          example: "person-002"
+        name:
+          type: string
+          description: "The full, standardized name of the person. Standardize where possible (e.g., 'Lilly K.' instead of 'Lilly')."
+          example: "Lilly K."
+        aliases:
+          type: array
+          description: "A list of other names, nicknames, or initials this person is referred to by in the text."
+          items:
+            type: string
+          example: ["Lilly"]
+        is_primary_author:
+          type: boolean
+          description: "True if this person is the author of the diary."
+          example: false
+        category:
+          type: string
+          description: "The general category of the person's relationship to the author."
+          enum: [Family, Friend, Classmate, Teacher, Public Figure, Acquaintance, Organization Member, Unknown]
+          example: "Friend"
+        description:
+          type: string
+          description: "A brief, AI-generated summary of this person based on all mentions in the diary."
+          example: "A friend of the author, member of the Arcadettes club, who was absent from school to work on her 'career book'."
+        mention_count:
+          type: integer
+          description: "The total number of diary entries this person is mentioned in."
+          example: 4
+
+    DiaryEntry:
+      type: object
+      description: Represents a single, distinct entry within the diary.
+      properties:
+        date_info:
+          $ref: '#/components/schemas/DateInfo'
+        page_number:
+          type: integer
+          description: The page number where this entry begins.
+          example: 3
+        full_text:
+          type: string
+          description: The complete, verbatim transcription of the diary entry.
+          example: "Stayed home all day. Finished my career book. Flo came up for a few minutes. Mother & Father went downtown to see a Jewish show. Last day of vacation. Oh Foo. Did homework. (Can't fill my space which isn't unusual). Frank Sinatra is still wormy."
+        summary:
+          type: string
+          description: A one or two-sentence summary of the entry's content.
+          example: "The author spent the last day of vacation at home, finishing her career book and doing homework. Her friend Flo visited, her parents went to a show, and she reiterated her dislike for Frank Sinatra."
+        mentioned_people:
+          type: array
+          description: A list of people mentioned specifically in this entry.
+          items:
+            $ref: '#/components/schemas/Mention'
+        mentioned_locations:
+          type: array
+          description: A list of specific places mentioned in this entry (e.g., "Miller's Pond", "Tremont Ave").
+          items:
+            type: string
+          example: ["downtown"]
+        key_events:
+          type: array
+          description: A list of key events or topics discussed in the entry.
+          items:
+            type: string
+          example: ["End of vacation", "Working on 'career book'"]
+        sentiment:
+          type: string
+          description: The inferred overall sentiment of the entry.
+          enum: [Positive, Negative, Neutral, Mixed]
+          example: "Neutral"
+        annotations:
+          type: array
+          description: A list of noteworthy cultural references, slang, or ambiguous terms with explanations. Notes on slang, cultural references, foreign languages, or shorthand.
+          items:
+            type: object
+            properties:
+              term:
+                type: string
+                example: "wormy"
+              context:
+                type: string
+                example: "Frank Sinatra is still wormy."
+              explanation:
+                type: string
+                example: "A 1940s slang term expressing contempt, implying someone is pathetic or creepy. It was a common term of derision used by those who disliked Frank Sinatra during his rise to fame."
+
+    DateInfo:
+      type: object
+      description: Detailed information about the date of an entry, handling ambiguity.
+      properties:
+        original_text:
+          type: string
+          description: The date as it was originally written in the diary.
+          example: "Sun. 1944"
+        iso_date:
+          type: string
+          format: date
+          description: The normalized date in YYYY-MM-DD format. Null if it cannot be determined.
+          example: "1944-01-02"
+        date_confidence:
+          type: string
+          description: Confidence level in the accuracy of the normalized ISO date.
+          enum: [High, Medium, Low, Inferred]
+          example: "High"
+
+    Mention:
+      type: object
+      description: Details of a single mention of a person within an entry.
+      properties:
+        metion_id:
+          type: string
+          description: "A unique, internally generated ID for this metion (e.g., 'metion-001'). Useful for database linking."
+          example: "metion-002"
+        name:
+          type: string
+          description: The name of the person as it appears in the text.
+          example: "Flo"
+        context:
+          type: string
+          description: The specific phrase or sentence where the person was mentioned, providing context.
+          example: "Flo came up for a few minutes."

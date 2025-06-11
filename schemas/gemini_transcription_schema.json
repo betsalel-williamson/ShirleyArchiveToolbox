@@ -1,0 +1,206 @@
+{
+  "description": "Represents the complete, structured transcription of a single journal page, enhanced to capture writing styles, decorations, and graphical elements.",
+  "type": "OBJECT",
+  "required": [
+    "page_number",
+    "image_source",
+    "image_dimensions",
+    "lines",
+    "graphical_elements"
+  ],
+  "properties": {
+    "page_number": {
+      "description": "The sequential number of the page in the journal. Use 0 for the cover/front matter.",
+      "type": "INTEGER"
+    },
+    "image_source": {
+      "description": "The filename or URL of the source page image.",
+      "type": "STRING"
+    },
+    "image_dimensions": {
+      "type": "OBJECT",
+      "required": [
+        "width",
+        "height"
+      ],
+      "properties": {
+        "width": {
+          "type": "INTEGER"
+        },
+        "height": {
+          "type": "INTEGER"
+        }
+      }
+    },
+    "lines": {
+      "description": "An ordered array of transcribed text lines found on the page.",
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "required": [
+          "line_id",
+          "words"
+        ],
+        "properties": {
+          "line_id": {
+            "description": "A unique identifier for the line within the page (e.g., 'line-1', 'line-2').",
+            "type": "STRING"
+          },
+          "words": {
+            "description": "An ordered array of the words transcribed on this line.",
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "required": [
+                "text",
+                "bounding_box",
+                "confidence",
+                "status",
+                "writing_style"
+              ],
+              "properties": {
+                "text": {
+                  "description": "The transcribed text of the word. For illegible words, this should be '[illegible]'.",
+                  "type": "STRING"
+                },
+                "bounding_box": {
+                  "description": "The coordinates of a rectangular box, with the origin (0,0) at the top-left corner of the page.",
+                  "type": "OBJECT",
+                  "required": [
+                    "x_min",
+                    "y_min",
+                    "x_max",
+                    "y_max"
+                  ],
+                  "properties": {
+                    "x_min": {
+                      "type": "INTEGER"
+                    },
+                    "y_min": {
+                      "type": "INTEGER"
+                    },
+                    "x_max": {
+                      "type": "INTEGER"
+                    },
+                    "y_max": {
+                      "type": "INTEGER"
+                    }
+                  }
+                },
+                "confidence": {
+                  "description": "The model's confidence in the accuracy of the transcription, from 0.0 (uncertain) to 1.0 (certain).",
+                  "type": "NUMBER",
+                  "format": "float"
+                },
+                "status": {
+                  "description": "The confidence status of the transcription for a single word.",
+                  "type": "STRING",
+                  "enum": [
+                    "Transcribed",
+                    "Hypothesized",
+                    "Illegible"
+                  ]
+                },
+                "writing_style": {
+                  "description": "The style of writing for a given word.",
+                  "type": "STRING",
+                  "enum": [
+                    "cursive",
+                    "print",
+                    "pre-printed_serif",
+                    "pre-printed_sans-serif",
+                    "pre-printed_script",
+                    "shorthand",
+                    "unknown"
+                  ]
+                },
+                "decoration": {
+                  "description": "Describes visual decorations applied to a word.",
+                  "type": "OBJECT",
+                  "properties": {
+                    "is_struckthrough": {
+                      "type": "BOOLEAN"
+                    },
+                    "is_underlined": {
+                      "type": "BOOLEAN"
+                    },
+                    "is_insertion": {
+                      "type": "BOOLEAN",
+                      "description": "True if this word was inserted above or below the main line of text."
+                    },
+                    "ink_color": {
+                      "type": "STRING"
+                    },
+                    "notes": {
+                      "type": "STRING",
+                      "description": "Note for complex decorations, e.g., 'Scribble underline.' or 'Inserted above ''FIVE'''."
+                    }
+                  }
+                },
+                "alternatives": {
+                  "description": "An optional list of alternative transcriptions, used for hypothesized or low-confidence words.",
+                  "type": "ARRAY",
+                  "items": {
+                    "type": "STRING"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "graphical_elements": {
+      "description": "An array of non-textual graphical elements on the page.",
+      "type": "ARRAY",
+      "items": {
+        "description": "A non-textual element on the page.",
+        "type": "OBJECT",
+        "required": [
+          "element_type",
+          "bounding_box"
+        ],
+        "properties": {
+          "element_type": {
+            "type": "STRING",
+            "enum": [
+              "stamp",
+              "doodle",
+              "scribble",
+              "drawing",
+              "stain"
+            ]
+          },
+          "bounding_box": {
+            "description": "The coordinates of a rectangular box, with the origin (0,0) at the top-left corner of the page.",
+            "type": "OBJECT",
+            "required": [
+              "x_min",
+              "y_min",
+              "x_max",
+              "y_max"
+            ],
+            "properties": {
+              "x_min": {
+                "type": "INTEGER"
+              },
+              "y_min": {
+                "type": "INTEGER"
+              },
+              "x_max": {
+                "type": "INTEGER"
+              },
+              "y_max": {
+                "type": "INTEGER"
+              }
+            }
+          },
+          "description": {
+            "type": "STRING",
+            "description": "A brief description of the element."
+          }
+        }
+      }
+    }
+  }
+}

@@ -4,42 +4,36 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "setup": "pnpm install",
-    "clean": "rimraf node_modules client/node_modules server/node_modules server/dist pnpm-lock.yaml *.sqlite",
-    "build:client": "pnpm --prefix client build",
-    "build:server": "pnpm --prefix server build",
+    "dev": "tsx dev-server.ts",
     "build": "pnpm build:client && pnpm build:server",
-    "start": "NODE_ENV=production node ./server/dist/server.js",
-    "dev:server:watch-compile": "pnpm --prefix server build -- --watch",
-    "dev:server:watch-run": "nodemon ./server/dist/server.js",
-    "dev:client": "pnpm --prefix client dev",
-    "dev:server": "tsx ./server/src/server.ts",
-    "seed": "tsx ./server/src/seed.ts"
+    "build:client": "vite build --outDir dist/client",
+    "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",
+    "start": "cross-env NODE_ENV=production node server.js",
+    "seed": "tsx ./src/seed.ts",
+    "clean": "rimraf dist dist-ssr ./*.sqlite* node_modules"
   },
   "dependencies": {
-    "better-sqlite3": "^11.10.0",
-    "express": "^4.18.2",
-    "kysely": "^0.28.2",
-    "vite": "^5.0.10"
+    "better-sqlite3": "^11.1.2",
+    "compression": "^1.7.4",
+    "express": "^4.19.2",
+    "kysely": "^0.27.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.23.1",
+    "sirv": "^2.0.4"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
+    "@types/better-sqlite3": "^7.6.10",
+    "@types/compression": "^1.7.5",
     "@types/express": "^4.17.21",
-    "@types/node": "^20.10.6",
-    "concurrently": "^8.2.2",
-    "nodemon": "^3.1.10",
-    "rimraf": "^6.0.1",
-    "ts-node": "^10.9.2",
-    "tsx": "^4.20.1",
-    "typescript": "^5.3.3"
-  },
-  "tsx": {
-    "watch": true,
-    "ignore": [
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/*.sqlite*",
-      "client/**"
-    ]
+    "@types/node": "^20.12.12",
+    "@types/react": "^18.3.2",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "cross-env": "^7.0.3",
+    "rimraf": "^5.0.7",
+    "tsx": "^4.9.4",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
   }
 }

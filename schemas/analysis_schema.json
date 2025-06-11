@@ -1,0 +1,474 @@
+{
+  "$defs": {
+    "Annotation": {
+      "properties": {
+        "term": {
+          "description": "The specific term, phrase, or symbol being annotated.",
+          "example": "wormy",
+          "title": "Term",
+          "type": "string"
+        },
+        "context": {
+          "description": "The full sentence or phrase where the term appeared.",
+          "example": "Frank Sinatra is still wormy.",
+          "title": "Context",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "An explanation of the term's meaning, cultural relevance, or translation.",
+          "example": "A 1940s slang term expressing contempt, implying someone is pathetic or creepy. It was a common term of derision used by those who disliked Frank Sinatra during his rise to fame.",
+          "title": "Explanation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "term",
+        "context",
+        "explanation"
+      ],
+      "title": "Annotation",
+      "type": "object"
+    },
+    "DateConfidence": {
+      "enum": [
+        "High",
+        "Medium",
+        "Low",
+        "Inferred"
+      ],
+      "title": "DateConfidence",
+      "type": "string"
+    },
+    "DateInfo": {
+      "properties": {
+        "original_text": {
+          "description": "The date as it was originally written in the diary.",
+          "example": "Sun. 1944",
+          "title": "Original Text",
+          "type": "string"
+        },
+        "iso_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The normalized date in YYYY-MM-DD format. Null if it cannot be determined.",
+          "example": "1944-01-02",
+          "title": "Iso Date"
+        },
+        "date_confidence": {
+          "$ref": "#/$defs/DateConfidence",
+          "description": "Confidence level in the accuracy of the normalized ISO date.",
+          "example": "High"
+        }
+      },
+      "required": [
+        "original_text",
+        "iso_date",
+        "date_confidence"
+      ],
+      "title": "DateInfo",
+      "type": "object"
+    },
+    "DateRange": {
+      "properties": {
+        "start_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The ISO 8601 date of the first entry.",
+          "example": "1943-01-01",
+          "title": "Start Date"
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The ISO 8601 date of the last entry.",
+          "example": "1948-01-05",
+          "title": "End Date"
+        }
+      },
+      "required": [
+        "start_date",
+        "end_date"
+      ],
+      "title": "DateRange",
+      "type": "object"
+    },
+    "DiaryEntry": {
+      "properties": {
+        "date_info": {
+          "$ref": "#/$defs/DateInfo"
+        },
+        "page_number": {
+          "description": "The page number where this entry begins.",
+          "example": 3,
+          "title": "Page Number",
+          "type": "integer"
+        },
+        "full_text": {
+          "description": "The complete, verbatim transcription of the diary entry.",
+          "example": "Stayed home all day. Finished my career book. Flo came up for a few minutes. Mother & Father went downtown to see a Jewish show. Last day of vacation. Oh Foo. Did homework. (Can't fill my space which isn't unusual). Frank Sinatra is still wormy.",
+          "title": "Full Text",
+          "type": "string"
+        },
+        "summary": {
+          "description": "A one or two-sentence summary of the entry's content.",
+          "example": "The author spent the last day of vacation at home, finishing her career book and doing homework. Her friend Flo visited, her parents went to a show, and she reiterated her dislike for Frank Sinatra.",
+          "title": "Summary",
+          "type": "string"
+        },
+        "mentioned_people": {
+          "description": "A list of people mentioned specifically in this entry.",
+          "items": {
+            "$ref": "#/$defs/Mention"
+          },
+          "title": "Mentioned People",
+          "type": "array"
+        },
+        "mentioned_locations": {
+          "description": "A list of specific places mentioned in this entry (e.g., 'Miller's Pond', 'Tremont Ave').",
+          "example_values": [
+            "downtown"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Mentioned Locations",
+          "type": "array"
+        },
+        "key_events": {
+          "description": "A list of key events or topics discussed in the entry.",
+          "example_values": [
+            "End of vacation",
+            "Working on 'career book'"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Key Events",
+          "type": "array"
+        },
+        "sentiment": {
+          "$ref": "#/$defs/Sentiment",
+          "description": "The inferred overall sentiment of the entry.",
+          "example": "Neutral"
+        },
+        "annotations": {
+          "description": "A list of noteworthy cultural references, slang, or ambiguous terms with explanations. Notes on slang, cultural references, foreign languages, or shorthand.",
+          "items": {
+            "$ref": "#/$defs/Annotation"
+          },
+          "title": "Annotations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "date_info",
+        "page_number",
+        "full_text",
+        "summary",
+        "mentioned_people",
+        "mentioned_locations",
+        "key_events",
+        "sentiment",
+        "annotations"
+      ],
+      "title": "DiaryEntry",
+      "type": "object"
+    },
+    "DiaryMetadata": {
+      "properties": {
+        "archive_id": {
+          "description": "The unique identifier for this diary in the archival system.",
+          "example": "D-1943-SP-001",
+          "title": "Archive Id",
+          "type": "string"
+        },
+        "title": {
+          "description": "The title of the diary, if one is written on the cover (e.g., 'My European Tour'). Otherwise, a generated title.",
+          "example": "TWO (FIVE) YEAR DIARY",
+          "title": "Title",
+          "type": "string"
+        },
+        "author": {
+          "description": "The name of the person who wrote the diary. Can be 'Unknown'.",
+          "example": "Shirley Pearl",
+          "title": "Author",
+          "type": "string"
+        },
+        "date_range": {
+          "$ref": "#/$defs/DateRange"
+        },
+        "physical_description": {
+          "description": "A description of the physical object (e.g., 'Small leather-bound book, brown cover with gold leaf, spine is damaged.')",
+          "example": "Brown leather-bound diary, 5x7 inches, with significant water damage on the back cover. Pre-printed 'Five Year Diary' with 'FIVE' crossed out and 'TWO' written above. Pages are cream-colored with purple printed lines.",
+          "title": "Physical Description",
+          "type": "string"
+        },
+        "provenance": {
+          "description": "Information about the diary's origin and ownership history.",
+          "example": "Donated by the estate of Eleanor Vance, granddaughter of the author.",
+          "title": "Provenance",
+          "type": "string"
+        },
+        "primary_language": {
+          "description": "The dominant language used throughout the diary.",
+          "example": "English",
+          "title": "Primary Language",
+          "type": "string"
+        },
+        "secondary_languages": {
+          "description": "A list of other languages that appear occasionally in the diary.",
+          "example_values": [
+            "French",
+            "Yiddish"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Secondary Languages",
+          "type": "array"
+        },
+        "writing_systems": {
+          "description": "A list of scripts or writing systems used, including any identified shorthand.",
+          "example_values": [
+            "Cursive",
+            "Gregg Shorthand"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Writing Systems",
+          "type": "array"
+        },
+        "language": {
+          "description": "The primary language of the diary.",
+          "example": "English",
+          "title": "Language",
+          "type": "string"
+        },
+        "key_entities": {
+          "description": "A list of significant recurring organizations, groups, or concepts mentioned in the diary.",
+          "items": {
+            "$ref": "#/$defs/KeyEntity"
+          },
+          "title": "Key Entities",
+          "type": "array"
+        }
+      },
+      "required": [
+        "archive_id",
+        "title",
+        "author",
+        "date_range",
+        "physical_description",
+        "provenance",
+        "primary_language",
+        "secondary_languages",
+        "writing_systems",
+        "language",
+        "key_entities"
+      ],
+      "title": "DiaryMetadata",
+      "type": "object"
+    },
+    "KeyEntity": {
+      "properties": {
+        "name": {
+          "example": "Arcadettes",
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/KeyEntityType",
+          "example": "Club"
+        },
+        "description": {
+          "example": "A social club the author and her friends (like Lilly and Dody) are members of.",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "description"
+      ],
+      "title": "KeyEntity",
+      "type": "object"
+    },
+    "KeyEntityType": {
+      "enum": [
+        "Organization",
+        "Club",
+        "Publication",
+        "Event",
+        "Other"
+      ],
+      "title": "KeyEntityType",
+      "type": "string"
+    },
+    "Mention": {
+      "properties": {
+        "metion_id": {
+          "description": "A unique, internally generated ID for this metion (e.g., 'metion-001'). Useful for database linking.",
+          "example": "metion-002",
+          "title": "Metion Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the person as it appears in the text.",
+          "example": "Flo",
+          "title": "Name",
+          "type": "string"
+        },
+        "context": {
+          "description": "The specific phrase or sentence where the person was mentioned, providing context.",
+          "example": "Flo came up for a few minutes.",
+          "title": "Context",
+          "type": "string"
+        }
+      },
+      "required": [
+        "metion_id",
+        "name",
+        "context"
+      ],
+      "title": "Mention",
+      "type": "object"
+    },
+    "Person": {
+      "properties": {
+        "person_id": {
+          "description": "A unique, internally generated ID for this person (e.g., 'person-001'). Useful for database linking.",
+          "example": "person-002",
+          "title": "Person Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "The full, standardized name of the person. Standardize where possible (e.g., 'Lilly K.' instead of 'Lilly').",
+          "example": "Lilly K.",
+          "title": "Name",
+          "type": "string"
+        },
+        "aliases": {
+          "description": "A list of other names, nicknames, or initials this person is referred to by in the text.",
+          "example_values": [
+            "Lilly"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "is_primary_author": {
+          "description": "True if this person is the author of the diary.",
+          "example": false,
+          "title": "Is Primary Author",
+          "type": "boolean"
+        },
+        "category": {
+          "$ref": "#/$defs/PersonCategory",
+          "description": "The general category of the person's relationship to the author.",
+          "example": "Friend"
+        },
+        "description": {
+          "description": "A brief, AI-generated summary of this person based on all mentions in the diary.",
+          "example": "A friend of the author, member of the Arcadettes club, who was absent from school to work on her 'career book'.",
+          "title": "Description",
+          "type": "string"
+        },
+        "mention_count": {
+          "description": "The total number of diary entries this person is mentioned in.",
+          "example": 4,
+          "title": "Mention Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "person_id",
+        "name",
+        "aliases",
+        "is_primary_author",
+        "category",
+        "description",
+        "mention_count"
+      ],
+      "title": "Person",
+      "type": "object"
+    },
+    "PersonCategory": {
+      "enum": [
+        "Family",
+        "Friend",
+        "Classmate",
+        "Teacher",
+        "Public Figure",
+        "Acquaintance",
+        "Organization Member",
+        "Unknown"
+      ],
+      "title": "PersonCategory",
+      "type": "string"
+    },
+    "Sentiment": {
+      "enum": [
+        "Positive",
+        "Negative",
+        "Neutral",
+        "Mixed"
+      ],
+      "title": "Sentiment",
+      "type": "string"
+    }
+  },
+  "description": "Represents a single, complete diary document.",
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/DiaryMetadata"
+    },
+    "people_index": {
+      "description": "A comprehensive index of all individuals mentioned in the diary.",
+      "items": {
+        "$ref": "#/$defs/Person"
+      },
+      "title": "People Index",
+      "type": "array"
+    },
+    "entries": {
+      "description": "A chronological list of all the entries transcribed from the diary.",
+      "items": {
+        "$ref": "#/$defs/DiaryEntry"
+      },
+      "title": "Entries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "metadata",
+    "people_index",
+    "entries"
+  ],
+  "title": "Diary Archival Schema",
+  "type": "object"
+}

@@ -1,0 +1,124 @@
+{
+  "title": "TranscriptionPage",
+  "description": "Represents the complete, structured transcription of a single journal page, focusing on text, geometry, and confidence.",
+  "type": "object",
+  "required": [
+    "page_number",
+    "image_source",
+    "image_dimensions",
+    "lines"
+  ],
+  "properties": {
+    "page_number": {
+      "title": "Page Number",
+      "description": "The sequential number of the page in the journal.",
+      "type": "integer",
+      "example": 5
+    },
+    "image_source": {
+      "title": "Image Source",
+      "description": "The filename or URL of the source page image.",
+      "type": "string",
+      "example": "D-1943-SP-001_p005.jpg"
+    },
+    "image_dimensions": {
+      "description": "The width and height of the source image in pixels.",
+      "$ref": "#/$defs/Dimensions"
+    },
+    "lines": {
+      "title": "Lines",
+      "description": "An ordered array of transcribed text lines found on the page.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Line"
+      }
+    }
+  },
+  "$defs": {
+    "Dimensions": {
+      "title": "Dimensions",
+      "type": "object",
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "example": 2400 },
+        "height": { "type": "integer", "example": 3600 }
+      }
+    },
+    "BoundingBox": {
+      "title": "BoundingBox",
+      "description": "The coordinates of a rectangular box, with the origin (0,0) at the top-left corner of the page.",
+      "type": "object",
+      "required": ["x_min", "y_min", "x_max", "y_max"],
+      "properties": {
+        "x_min": { "type": "integer", "example": 150 },
+        "y_min": { "type": "integer", "example": 310 },
+        "x_max": { "type": "integer", "example": 280 },
+        "y_max": { "type": "integer", "example": 345 }
+      }
+    },
+    "WordStatus": {
+      "title": "WordStatus",
+      "description": "The confidence status of the transcription for a single word.",
+      "type": "string",
+      "enum": [
+        "Transcribed",
+        "Hypothesized",
+        "Illegible"
+      ]
+    },
+    "Word": {
+      "title": "Word",
+      "type": "object",
+      "required": ["text", "bounding_box", "confidence", "status"],
+      "properties": {
+        "text": {
+          "title": "Text",
+          "description": "The transcribed text of the word. For illegible words, this should be '[illegible]'.",
+          "type": "string",
+          "example": "beautiful"
+        },
+        "bounding_box": {
+          "$ref": "#/$defs/BoundingBox"
+        },
+        "confidence": {
+          "title": "Confidence",
+          "description": "The model's confidence in the accuracy of the transcription, from 0.0 (uncertain) to 1.0 (certain).",
+          "type": "number",
+          "format": "float",
+          "example": 0.98
+        },
+        "status": {
+          "$ref": "#/$defs/WordStatus"
+        },
+        "alternatives": {
+          "title": "Alternatives",
+          "description": "An optional list of alternative transcriptions, used for hypothesized or low-confidence words.",
+          "type": "array",
+          "items": { "type": "string" },
+          "example": ["beautiful?", "bountiful"]
+        }
+      }
+    },
+    "Line": {
+      "title": "Line",
+      "type": "object",
+      "required": ["line_id", "words"],
+      "properties": {
+        "line_id": {
+          "title": "Line ID",
+          "description": "A unique identifier for the line within the page (e.g., 'line-1', 'line-2').",
+          "type": "string",
+          "example": "line-12"
+        },
+        "words": {
+          "title": "Words",
+          "description": "An ordered array of the words transcribed on this line.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Word"
+          }
+        }
+      }
+    }
+  }
+}
