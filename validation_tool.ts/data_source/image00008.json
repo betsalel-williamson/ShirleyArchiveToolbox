@@ -1,0 +1,3307 @@
+{
+  "graphical_elements": [],
+  "image_dimensions": {
+    "height": 1578,
+    "width": 2387
+  },
+  "image_source": "image00008.jpg",
+  "lines": [
+    {
+      "line_id": "line-1",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 473,
+            "x_min": 240,
+            "y_max": 181,
+            "y_min": 155
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "JANUARY",
+          "writing_style": "pre-printed_sans-serif"
+        },
+        {
+          "bounding_box": {
+            "x_max": 546,
+            "x_min": 484,
+            "y_max": 181,
+            "y_min": 156
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "10",
+          "writing_style": "pre-printed_sans-serif"
+        }
+      ]
+    },
+    {
+      "line_id": "line-2",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 779,
+            "x_min": 491,
+            "y_max": 180,
+            "y_min": 112
+          },
+          "confidence": 0.98,
+          "status": "Transcribed",
+          "text": "(Practiced",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 659,
+            "x_min": 560,
+            "y_max": 150,
+            "y_min": 113
+          },
+          "confidence": 0.98,
+          "status": "Transcribed",
+          "text": "typing",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-3",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 605,
+            "x_min": 543,
+            "y_max": 181,
+            "y_min": 149
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "did",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 662,
+            "x_min": 609,
+            "y_max": 181,
+            "y_min": 150
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "my",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 779,
+            "x_min": 664,
+            "y_max": 181,
+            "y_min": 149
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "homework)",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-4",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 322,
+            "x_min": 160,
+            "y_max": 224,
+            "y_min": 191
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Sunday",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-5",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 257,
+            "x_min": 162,
+            "y_max": 259,
+            "y_min": 229
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "1943",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 286,
+            "x_min": 264,
+            "y_max": 259,
+            "y_min": 232
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "I",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 394,
+            "x_min": 296,
+            "y_max": 262,
+            "y_min": 232
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "went",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 435,
+            "x_min": 401,
+            "y_max": 262,
+            "y_min": 234
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "to",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 490,
+            "x_min": 439,
+            "y_max": 262,
+            "y_min": 234
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 605,
+            "x_min": 494,
+            "y_max": 262,
+            "y_min": 231
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "movies",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-6",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 260,
+            "x_min": 161,
+            "y_max": 298,
+            "y_min": 266
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "with",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 313,
+            "x_min": 267,
+            "y_max": 298,
+            "y_min": 268
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "my",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 418,
+            "x_min": 319,
+            "y_max": 299,
+            "y_min": 268
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "whole",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 530,
+            "x_min": 423,
+            "y_max": 299,
+            "y_min": 267
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "family",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 600,
+            "x_min": 536,
+            "y_max": 299,
+            "y_min": 269
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "and",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 673,
+            "x_min": 607,
+            "y_max": 299,
+            "y_min": 270
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "also",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-7",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 263,
+            "x_min": 161,
+            "y_max": 334,
+            "y_min": 302
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "with",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 341,
+            "x_min": 268,
+            "y_max": 334,
+            "y_min": 302
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Rita",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 371,
+            "x_min": 345,
+            "y_max": 334,
+            "y_min": 305
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "&",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 435,
+            "x_min": 377,
+            "y_max": 334,
+            "y_min": 304
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "her",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 526,
+            "x_min": 439,
+            "y_max": 334,
+            "y_min": 303
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "sister",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 662,
+            "x_min": 530,
+            "y_max": 334,
+            "y_min": 303
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Florence.",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-8",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 258,
+            "x_min": 163,
+            "y_max": 372,
+            "y_min": 337
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Saw",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 310,
+            "x_min": 261,
+            "y_max": 372,
+            "y_min": 337
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "\"The",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 427,
+            "x_min": 313,
+            "y_max": 372,
+            "y_min": 338
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Wizard",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 472,
+            "x_min": 430,
+            "y_max": 372,
+            "y_min": 338
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "of",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 531,
+            "x_min": 475,
+            "y_max": 372,
+            "y_min": 338
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Oz\"",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 560,
+            "x_min": 534,
+            "y_max": 372,
+            "y_min": 341
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "+",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 618,
+            "x_min": 562,
+            "y_max": 372,
+            "y_min": 339
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "\"The",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 718,
+            "x_min": 620,
+            "y_max": 372,
+            "y_min": 338
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Major+",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-9",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 218,
+            "x_min": 164,
+            "y_max": 408,
+            "y_min": 376
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "19",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 272,
+            "x_min": 222,
+            "y_max": 408,
+            "y_min": 377
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 369,
+            "x_min": 274,
+            "y_max": 408,
+            "y_min": 375
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Minor\".",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 468,
+            "x_min": 376,
+            "y_max": 408,
+            "y_min": 375
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "They",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 546,
+            "x_min": 472,
+            "y_max": 408,
+            "y_min": 376
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "were",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 622,
+            "x_min": 551,
+            "y_max": 408,
+            "y_min": 376
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "both",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 703,
+            "x_min": 627,
+            "y_max": 408,
+            "y_min": 376
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "good",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-10",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 260,
+            "x_min": 164,
+            "y_max": 444,
+            "y_min": 412
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Saw",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 312,
+            "x_min": 262,
+            "y_max": 444,
+            "y_min": 412
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "\"the",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 427,
+            "x_min": 316,
+            "y_max": 444,
+            "y_min": 412
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Wizard",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 470,
+            "x_min": 431,
+            "y_max": 444,
+            "y_min": 413
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "of",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 530,
+            "x_min": 473,
+            "y_max": 444,
+            "y_min": 412
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Oz\"",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 601,
+            "x_min": 536,
+            "y_max": 444,
+            "y_min": 413
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "long",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 669,
+            "x_min": 606,
+            "y_max": 444,
+            "y_min": 414
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "ago.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 761,
+            "x_min": 673,
+            "y_max": 444,
+            "y_min": 413
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "There",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-11",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 261,
+            "x_min": 164,
+            "y_max": 479,
+            "y_min": 448
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "were",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 353,
+            "x_min": 266,
+            "y_max": 479,
+            "y_min": 448
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "packs",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 393,
+            "x_min": 357,
+            "y_max": 479,
+            "y_min": 449
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "of",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 498,
+            "x_min": 398,
+            "y_max": 479,
+            "y_min": 448
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "people",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 540,
+            "x_min": 501,
+            "y_max": 479,
+            "y_min": 449
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "in",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 591,
+            "x_min": 545,
+            "y_max": 479,
+            "y_min": 450
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 686,
+            "x_min": 595,
+            "y_max": 479,
+            "y_min": 449
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "movie",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-12",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 232,
+            "x_min": 165,
+            "y_max": 515,
+            "y_min": 483
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Rita",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 339,
+            "x_min": 236,
+            "y_max": 515,
+            "y_min": 482
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "wanted",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 387,
+            "x_min": 343,
+            "y_max": 515,
+            "y_min": 484
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "me",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 427,
+            "x_min": 391,
+            "y_max": 515,
+            "y_min": 484
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "to",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 472,
+            "x_min": 431,
+            "y_max": 515,
+            "y_min": 484
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "go",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 551,
+            "x_min": 477,
+            "y_max": 515,
+            "y_min": 483
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "with",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 619,
+            "x_min": 555,
+            "y_max": 515,
+            "y_min": 483
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Fay",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 698,
+            "x_min": 622,
+            "y_max": 515,
+            "y_min": 483
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "when",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-13",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 182,
+            "x_min": 164,
+            "y_max": 551,
+            "y_min": 521
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "I",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 281,
+            "x_min": 185,
+            "y_max": 551,
+            "y_min": 519
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "didn't",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 401,
+            "x_min": 286,
+            "y_max": 551,
+            "y_min": 518
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "because",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 427,
+            "x_min": 406,
+            "y_max": 551,
+            "y_min": 520
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "I",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 498,
+            "x_min": 432,
+            "y_max": 551,
+            "y_min": 519
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "saw",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 557,
+            "x_min": 501,
+            "y_max": 551,
+            "y_min": 520
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "her",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 632,
+            "x_min": 561,
+            "y_max": 551,
+            "y_min": 519
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "with",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-14",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 269,
+            "x_min": 166,
+            "y_max": 587,
+            "y_min": 554
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "there.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 408,
+            "x_min": 273,
+            "y_max": 587,
+            "y_min": 554
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Listened",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 447,
+            "x_min": 412,
+            "y_max": 587,
+            "y_min": 556
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "to",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 499,
+            "x_min": 451,
+            "y_max": 587,
+            "y_min": 556
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 622,
+            "x_min": 503,
+            "y_max": 587,
+            "y_min": 554
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Shadow",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 776,
+            "x_min": 625,
+            "y_max": 587,
+            "y_min": 554
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "yesterday",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-15",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 284,
+            "x_min": 165,
+            "y_max": 623,
+            "y_min": 589
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Went",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 326,
+            "x_min": 289,
+            "y_max": 623,
+            "y_min": 591
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "to",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 432,
+            "x_min": 331,
+            "y_max": 623,
+            "y_min": 590
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "school.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 535,
+            "x_min": 437,
+            "y_max": 623,
+            "y_min": 590
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Myra",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 567,
+            "x_min": 538,
+            "y_max": 623,
+            "y_min": 593
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "&",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 662,
+            "x_min": 570,
+            "y_max": 623,
+            "y_min": 589
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Teddy",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 716,
+            "x_min": 666,
+            "y_max": 623,
+            "y_min": 591
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "are",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-16",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 268,
+            "x_min": 166,
+            "y_max": 659,
+            "y_min": 626
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "mad.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 361,
+            "x_min": 272,
+            "y_max": 659,
+            "y_min": 626
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "They",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 429,
+            "x_min": 366,
+            "y_max": 659,
+            "y_min": 627
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "had",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 526,
+            "x_min": 432,
+            "y_max": 659,
+            "y_min": 627
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "better",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 591,
+            "x_min": 530,
+            "y_max": 659,
+            "y_min": 627
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "get",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 662,
+            "x_min": 595,
+            "y_max": 659,
+            "y_min": 627
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "glad",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 707,
+            "x_min": 666,
+            "y_max": 659,
+            "y_min": 628
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "or",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 772,
+            "x_min": 711,
+            "y_max": 659,
+            "y_min": 627
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "else.",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-17",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 184,
+            "x_min": 167,
+            "y_max": 694,
+            "y_min": 663
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "I",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 286,
+            "x_min": 188,
+            "y_max": 694,
+            "y_min": 662
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "won't",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 328,
+            "x_min": 290,
+            "y_max": 694,
+            "y_min": 663
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "go",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 479,
+            "x_min": 332,
+            "y_max": 694,
+            "y_min": 662
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "swimming.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 508,
+            "x_min": 483,
+            "y_max": 694,
+            "y_min": 663
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "I",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 605,
+            "x_min": 512,
+            "y_max": 694,
+            "y_min": 662
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "won't",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 645,
+            "x_min": 609,
+            "y_max": 694,
+            "y_min": 663
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "go",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 711,
+            "x_min": 649,
+            "y_max": 694,
+            "y_min": 662
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "any",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-18",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 273,
+            "x_min": 166,
+            "y_max": 731,
+            "y_min": 698
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "more",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 338,
+            "x_min": 277,
+            "y_max": 731,
+            "y_min": 699
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "this",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 427,
+            "x_min": 343,
+            "y_max": 731,
+            "y_min": 699
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "term.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 517,
+            "x_min": 432,
+            "y_max": 731,
+            "y_min": 699
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Lots",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 559,
+            "x_min": 521,
+            "y_max": 731,
+            "y_min": 700
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "of",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 632,
+            "x_min": 563,
+            "y_max": 731,
+            "y_min": 700
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "kids",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 725,
+            "x_min": 636,
+            "y_max": 731,
+            "y_min": 700
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "failed",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 761,
+            "x_min": 728,
+            "y_max": 731,
+            "y_min": 701
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "in",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 818,
+            "x_min": 764,
+            "y_max": 731,
+            "y_min": 699
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Bio",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-19",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 232,
+            "x_min": 167,
+            "y_max": 767,
+            "y_min": 735
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "and",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 257,
+            "x_min": 236,
+            "y_max": 767,
+            "y_min": 736
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "I",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 349,
+            "x_min": 261,
+            "y_max": 767,
+            "y_min": 735
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "asked",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 425,
+            "x_min": 353,
+            "y_max": 767,
+            "y_min": 734
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Mrs.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 512,
+            "x_min": 429,
+            "y_max": 767,
+            "y_min": 734
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Gold,",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 554,
+            "x_min": 516,
+            "y_max": 767,
+            "y_min": 736
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "if",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 579,
+            "x_min": 558,
+            "y_max": 767,
+            "y_min": 737
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "I",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 686,
+            "x_min": 583,
+            "y_max": 767,
+            "y_min": 735
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "passed.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 758,
+            "x_min": 690,
+            "y_max": 767,
+            "y_min": 735
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "She",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-20",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 255,
+            "x_min": 168,
+            "y_max": 803,
+            "y_min": 771
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "said",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 331,
+            "x_min": 259,
+            "y_max": 803,
+            "y_min": 771
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "that",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 353,
+            "x_min": 334,
+            "y_max": 803,
+            "y_min": 772
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "I",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 415,
+            "x_min": 357,
+            "y_max": 803,
+            "y_min": 771
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "got",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 469,
+            "x_min": 419,
+            "y_max": 803,
+            "y_min": 772
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 587,
+            "x_min": 472,
+            "y_max": 803,
+            "y_min": 770
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "highest",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 673,
+            "x_min": 591,
+            "y_max": 803,
+            "y_min": 771
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "mark",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 711,
+            "x_min": 676,
+            "y_max": 803,
+            "y_min": 773
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "in",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 788,
+            "x_min": 716,
+            "y_max": 803,
+            "y_min": 771
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "both",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-21",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 298,
+            "x_min": 169,
+            "y_max": 840,
+            "y_min": 806
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "classes.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 321,
+            "x_min": 302,
+            "y_max": 840,
+            "y_min": 807
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "I",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 427,
+            "x_min": 325,
+            "y_max": 840,
+            "y_min": 806
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "could",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 530,
+            "x_min": 431,
+            "y_max": 840,
+            "y_min": 807
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "hardly",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 643,
+            "x_min": 533,
+            "y_max": 840,
+            "y_min": 807
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "believe",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 682,
+            "x_min": 646,
+            "y_max": 840,
+            "y_min": 807
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "it.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 765,
+            "x_min": 687,
+            "y_max": 840,
+            "y_min": 807
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "heff",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-22",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 218,
+            "x_min": 169,
+            "y_max": 875,
+            "y_min": 844
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "19",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 321,
+            "x_min": 221,
+            "y_max": 875,
+            "y_min": 843
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "regents",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 402,
+            "x_min": 325,
+            "y_max": 875,
+            "y_min": 843
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "week.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 472,
+            "x_min": 406,
+            "y_max": 875,
+            "y_min": 843
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "No",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 575,
+            "x_min": 476,
+            "y_max": 875,
+            "y_min": 843
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "school",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 625,
+            "x_min": 579,
+            "y_max": 875,
+            "y_min": 844
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "for",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 678,
+            "x_min": 629,
+            "y_max": 875,
+            "y_min": 844
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "me.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 757,
+            "x_min": 684,
+            "y_max": 875,
+            "y_min": 843
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "O.K",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-23",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 208,
+            "x_min": 170,
+            "y_max": 912,
+            "y_min": 879
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "[gregg_symbol]",
+          "writing_style": "shorthand"
+        },
+        {
+          "bounding_box": {
+            "x_max": 257,
+            "x_min": 210,
+            "y_max": 912,
+            "y_min": 880
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "[gregg_symbol]",
+          "writing_style": "shorthand"
+        },
+        {
+          "bounding_box": {
+            "x_max": 330,
+            "x_min": 260,
+            "y_max": 912,
+            "y_min": 881
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "[gregg_symbol]",
+          "writing_style": "shorthand"
+        },
+        {
+          "bounding_box": {
+            "x_max": 393,
+            "x_min": 333,
+            "y_max": 912,
+            "y_min": 880
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "that",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 425,
+            "x_min": 396,
+            "y_max": 912,
+            "y_min": 881
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "[gregg_symbol]",
+          "writing_style": "shorthand"
+        },
+        {
+          "bounding_box": {
+            "x_max": 476,
+            "x_min": 427,
+            "y_max": 912,
+            "y_min": 881
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "[gregg_symbol]",
+          "writing_style": "shorthand"
+        },
+        {
+          "bounding_box": {
+            "x_max": 515,
+            "x_min": 478,
+            "y_max": 912,
+            "y_min": 881
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "[gregg_symbol]",
+          "writing_style": "shorthand"
+        },
+        {
+          "bounding_box": {
+            "x_max": 583,
+            "x_min": 517,
+            "y_max": 912,
+            "y_min": 880
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "[gregg_symbol]",
+          "writing_style": "shorthand"
+        },
+        {
+          "bounding_box": {
+            "x_max": 655,
+            "x_min": 586,
+            "y_max": 912,
+            "y_min": 881
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "[gregg_symbol]",
+          "writing_style": "shorthand"
+        }
+      ]
+    },
+    {
+      "line_id": "line-24",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 273,
+            "x_min": 170,
+            "y_max": 948,
+            "y_min": 916
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "some",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 361,
+            "x_min": 278,
+            "y_max": 948,
+            "y_min": 916
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "went",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 401,
+            "x_min": 366,
+            "y_max": 948,
+            "y_min": 917
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "to",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 489,
+            "x_min": 405,
+            "y_max": 948,
+            "y_min": 917
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "work",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-25",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1634,
+            "x_min": 1402,
+            "y_max": 133,
+            "y_min": 107
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "JANUARY",
+          "writing_style": "pre-printed_sans-serif"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1696,
+            "x_min": 1645,
+            "y_max": 132,
+            "y_min": 108
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "11",
+          "writing_style": "pre-printed_sans-serif"
+        }
+      ]
+    },
+    {
+      "line_id": "line-26",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1380,
+            "x_min": 1222,
+            "y_max": 172,
+            "y_min": 140
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Monday",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-27",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1319,
+            "x_min": 1223,
+            "y_max": 208,
+            "y_min": 177
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "1943",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1345,
+            "x_min": 1324,
+            "y_max": 208,
+            "y_min": 180
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "I",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1408,
+            "x_min": 1350,
+            "y_max": 208,
+            "y_min": 179
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "got",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1458,
+            "x_min": 1413,
+            "y_max": 208,
+            "y_min": 179
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "90",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1500,
+            "x_min": 1461,
+            "y_max": 208,
+            "y_min": 180
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "on",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1555,
+            "x_min": 1503,
+            "y_max": 208,
+            "y_min": 180
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "my",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1672,
+            "x_min": 1558,
+            "y_max": 208,
+            "y_min": 178
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Science",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1746,
+            "x_min": 1675,
+            "y_max": 208,
+            "y_min": 179
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "test.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1858,
+            "x_min": 1750,
+            "y_max": 208,
+            "y_min": 179
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "School",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1935,
+            "x_min": 1862,
+            "y_max": 208,
+            "y_min": 180
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "here",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-28",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1282,
+            "x_min": 1224,
+            "y_max": 244,
+            "y_min": 215
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "is",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1332,
+            "x_min": 1286,
+            "y_max": 244,
+            "y_min": 215
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1428,
+            "x_min": 1336,
+            "y_max": 244,
+            "y_min": 214
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "same.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1515,
+            "x_min": 1432,
+            "y_max": 244,
+            "y_min": 213
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Had",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1554,
+            "x_min": 1518,
+            "y_max": 244,
+            "y_min": 215
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "to",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1599,
+            "x_min": 1558,
+            "y_max": 244,
+            "y_min": 215
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "go",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1642,
+            "x_min": 1603,
+            "y_max": 244,
+            "y_min": 216
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "on",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1684,
+            "x_min": 1646,
+            "y_max": 244,
+            "y_min": 216
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "an",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1797,
+            "x_min": 1687,
+            "y_max": 244,
+            "y_min": 215
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "errand",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1852,
+            "x_min": 1801,
+            "y_max": 244,
+            "y_min": 216
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "for",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-29",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1334,
+            "x_min": 1225,
+            "y_max": 280,
+            "y_min": 249
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Mr.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1494,
+            "x_min": 1337,
+            "y_max": 280,
+            "y_min": 248
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Marshall",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1572,
+            "x_min": 1498,
+            "y_max": 280,
+            "y_min": 249
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "who",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1645,
+            "x_min": 1575,
+            "y_max": 280,
+            "y_min": 250
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "was",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1686,
+            "x_min": 1648,
+            "y_max": 280,
+            "y_min": 251
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "in",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1738,
+            "x_min": 1690,
+            "y_max": 280,
+            "y_min": 251
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1836,
+            "x_min": 1741,
+            "y_max": 280,
+            "y_min": 250
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "shop.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1899,
+            "x_min": 1839,
+            "y_max": 280,
+            "y_min": 250
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "He",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-30",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1280,
+            "x_min": 1225,
+            "y_max": 316,
+            "y_min": 286
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "is",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1374,
+            "x_min": 1284,
+            "y_max": 316,
+            "y_min": 286
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "lucky",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1472,
+            "x_min": 1378,
+            "y_max": 316,
+            "y_min": 285
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "there",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1590,
+            "x_min": 1475,
+            "y_max": 316,
+            "y_min": 285
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "except",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1642,
+            "x_min": 1594,
+            "y_max": 316,
+            "y_min": 286
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1726,
+            "x_min": 1645,
+            "y_max": 316,
+            "y_min": 286
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "only",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1803,
+            "x_min": 1729,
+            "y_max": 316,
+            "y_min": 286
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "boy",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1845,
+            "x_min": 1807,
+            "y_max": 316,
+            "y_min": 288
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "in",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1898,
+            "x_min": 1849,
+            "y_max": 316,
+            "y_min": 288
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-31",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1275,
+            "x_min": 1227,
+            "y_max": 352,
+            "y_min": 321
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "19",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1374,
+            "x_min": 1279,
+            "y_max": 352,
+            "y_min": 320
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "class",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1445,
+            "x_min": 1378,
+            "y_max": 352,
+            "y_min": 321
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "was",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1515,
+            "x_min": 1448,
+            "y_max": 352,
+            "y_min": 321
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "that",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1572,
+            "x_min": 1518,
+            "y_max": 352,
+            "y_min": 321
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "\"Jerk\"",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1644,
+            "x_min": 1575,
+            "y_max": 352,
+            "y_min": 321
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Poe.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1705,
+            "x_min": 1648,
+            "y_max": 352,
+            "y_min": 321
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "He",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1776,
+            "x_min": 1709,
+            "y_max": 352,
+            "y_min": 321
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "was",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1874,
+            "x_min": 1779,
+            "y_max": 352,
+            "y_min": 320
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "show-",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-32",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1290,
+            "x_min": 1227,
+            "y_max": 388,
+            "y_min": 357
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "ing",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1344,
+            "x_min": 1294,
+            "y_max": 388,
+            "y_min": 358
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "off",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1391,
+            "x_min": 1347,
+            "y_max": 388,
+            "y_min": 358
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "so",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1494,
+            "x_min": 1394,
+            "y_max": 388,
+            "y_min": 357
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "much",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1534,
+            "x_min": 1498,
+            "y_max": 388,
+            "y_min": 359
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "to",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1667,
+            "x_min": 1537,
+            "y_max": 388,
+            "y_min": 357
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "impress",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1721,
+            "x_min": 1670,
+            "y_max": 388,
+            "y_min": 358
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "me.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1782,
+            "x_min": 1724,
+            "y_max": 388,
+            "y_min": 357
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "He",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1909,
+            "x_min": 1785,
+            "y_max": 388,
+            "y_min": 357
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "knockd",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-33",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1342,
+            "x_min": 1228,
+            "y_max": 425,
+            "y_min": 392
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "some",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1441,
+            "x_min": 1346,
+            "y_max": 425,
+            "y_min": 393
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "wood",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1483,
+            "x_min": 1445,
+            "y_max": 425,
+            "y_min": 394
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "on",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1534,
+            "x_min": 1487,
+            "y_max": 425,
+            "y_min": 394
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1621,
+            "x_min": 1537,
+            "y_max": 425,
+            "y_min": 393
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "floor",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1650,
+            "x_min": 1625,
+            "y_max": 425,
+            "y_min": 396
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "+",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1761,
+            "x_min": 1653,
+            "y_max": 425,
+            "y_min": 393
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "looked",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1804,
+            "x_min": 1765,
+            "y_max": 425,
+            "y_min": 394
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "at",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1858,
+            "x_min": 1808,
+            "y_max": 425,
+            "y_min": 394
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "me.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1940,
+            "x_min": 1861,
+            "y_max": 425,
+            "y_min": 393
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "He's",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-34",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1361,
+            "x_min": 1229,
+            "y_max": 461,
+            "y_min": 429
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "terrible.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1383,
+            "x_min": 1365,
+            "y_max": 461,
+            "y_min": 431
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "I",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1475,
+            "x_min": 1386,
+            "y_max": 461,
+            "y_min": 430
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "think",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1529,
+            "x_min": 1478,
+            "y_max": 461,
+            "y_min": 430
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "he's",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1579,
+            "x_min": 1532,
+            "y_max": 461,
+            "y_min": 430
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "16.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1609,
+            "x_min": 1582,
+            "y_max": 461,
+            "y_min": 433
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "+",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1648,
+            "x_min": 1612,
+            "y_max": 461,
+            "y_min": 433
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "in",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1708,
+            "x_min": 1651,
+            "y_max": 461,
+            "y_min": 431
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "9A.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1823,
+            "x_min": 1712,
+            "y_max": 461,
+            "y_min": 429
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Went",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1944,
+            "x_min": 1826,
+            "y_max": 461,
+            "y_min": 430
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "dancing.",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-35",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1276,
+            "x_min": 1230,
+            "y_max": 497,
+            "y_min": 466
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "19",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1318,
+            "x_min": 1280,
+            "y_max": 497,
+            "y_min": 467
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "at",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1369,
+            "x_min": 1321,
+            "y_max": 497,
+            "y_min": 467
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1445,
+            "x_min": 1373,
+            "y_max": 497,
+            "y_min": 465
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "\"Y\".",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1563,
+            "x_min": 1447,
+            "y_max": 497,
+            "y_min": 466
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "(from",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1640,
+            "x_min": 1566,
+            "y_max": 497,
+            "y_min": 467
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "now",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1682,
+            "x_min": 1644,
+            "y_max": 497,
+            "y_min": 468
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "on",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1729,
+            "x_min": 1686,
+            "y_max": 497,
+            "y_min": 468
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "no",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1827,
+            "x_min": 1732,
+            "y_max": 497,
+            "y_min": 467
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "more",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1946,
+            "x_min": 1831,
+            "y_max": 497,
+            "y_min": 467
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "dancing)",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-36",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1419,
+            "x_min": 1230,
+            "y_max": 533,
+            "y_min": 501
+          },
+          "confidence": 0.98,
+          "status": "Hypothesized",
+          "text": "(disturb",
+          "writing_style": "cursive",
+          "alternatives": [
+            "disturbed"
+          ]
+        },
+        {
+          "bounding_box": {
+            "x_max": 1459,
+            "x_min": 1423,
+            "y_max": 533,
+            "y_min": 503
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "to",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1546,
+            "x_min": 1463,
+            "y_max": 533,
+            "y_min": 502
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "talk)",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1642,
+            "x_min": 1550,
+            "y_max": 533,
+            "y_min": 501
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Went",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1682,
+            "x_min": 1646,
+            "y_max": 533,
+            "y_min": 503
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "to",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1785,
+            "x_min": 1686,
+            "y_max": 533,
+            "y_min": 501
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Judys",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1832,
+            "x_min": 1788,
+            "y_max": 533,
+            "y_min": 503
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "up",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1960,
+            "x_min": 1835,
+            "y_max": 533,
+            "y_min": 501
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Phillips",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 2083,
+            "x_min": 1964,
+            "y_max": 533,
+            "y_min": 501
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "house...",
+          "writing_style": "cursive"
+        }
+      ]
+    },
+    {
+      "line_id": "line-37",
+      "words": [
+        {
+          "bounding_box": {
+            "x_max": 1307,
+            "x_min": 1230,
+            "y_max": 569,
+            "y_min": 537
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "day.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1404,
+            "x_min": 1311,
+            "y_max": 569,
+            "y_min": 536
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Went",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1445,
+            "x_min": 1408,
+            "y_max": 569,
+            "y_min": 538
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "to",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1549,
+            "x_min": 1448,
+            "y_max": 569,
+            "y_min": 537
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "school.",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1699,
+            "x_min": 1553,
+            "y_max": 569,
+            "y_min": 536
+          },
+          "confidence": 0.99,
+          "status": "Transcribed",
+          "text": "Tomorrow",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1735,
+            "x_min": 1702,
+            "y_max": 569,
+            "y_min": 539
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "is",
+          "writing_style": "cursive"
+        },
+        {
+          "bounding_box": {
+            "x_max": 1787,
+            "x_min": 1739,
+            "y_max": 569,
+            "y_min": 539
+          },
+          "confidence": 1.0,
+          "status": "Transcribed",
+          "text": "the",
+          "writing_style": "cursive"
+        }
+      ]
+    }
+  ],
+  "page_number": 10
+}

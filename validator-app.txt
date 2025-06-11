@@ -1,3 +1,4 @@
+--- ./pnpm-lock.yaml ---
 lockfileVersion: '6.0'
 
 settings:
@@ -4585,3 +4586,1717 @@ packages:
     resolution: {integrity: sha512-AyeEbWOu/TAXdxlV9wmGcR0+yh2j3vYPGOECcIj2S7MkrLyC7ne+oye2BKTItt0ii2PHk4cDy+95+LshzbXnGg==}
     engines: {node: '>=12.20'}
     dev: true
+
+--- ./types/types.d.ts ---
+// declare modules here
+
+--- ./index.html ---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transcription Validation Tool</title>
+    <!--head-->
+  </head>
+  <body>
+    <div id="root"><!--app-html--></div>
+    <script type="module" src="/src/client/entry-client.tsx"></script>
+  </body>
+</html>
+
+--- ./postcss.config.cjs ---
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+
+--- ./.prettierignore ---
+dist
+build
+node_modules
+coverage
+pnpm-lock.yaml
+
+--- ./README.md ---
+# Vite Typescript React 18 SSR
+
+[![Node CI](https://github.com/jonluca/vite-typescript-ssr-react/actions/workflows/nodejs.yml/badge.svg)](https://github.com/jonluca/vite-typescript-ssr-react/actions/workflows/nodejs.yml)
+
+A _blazingly_ modern web development stack. This template repo tries to achieve the minimum viable example for each of the following:
+
+![video](video.gif)
+
+- [React 18](https://reactjs.org/blog/2022/03/29/react-v18.html)
+- [Typescript 4.9](https://devblogs.microsoft.com/typescript/announcing-typescript-4-7/)
+- [Vite with Vite SSR](https://vitejs.dev/guide/ssr.html)
+- [GitHub Actions](https://github.com/features/actions)
+- [Tailwind CSS](https://tailwindui.com/)
+- [Prettier](https://prettier.io/) & [ESLint](https://eslint.org/)
+
+## Development
+
+```
+yarn
+yarn dev:server
+```
+
+That should start the server. It will open to http://localhost:7456.
+
+If you'd like to just develop the UI, you can use
+
+```bash
+yarn
+yarn dev:client
+```
+
+To start the native vite client.
+
+## Building
+
+```
+yarn build
+yarn serve
+```
+
+yarn build will create the assets in `dist` - a `client` and `server` folder. Serve will run `dist/server.js` with Node, but feel free to change this to use Docker or some other process manager to suit your deployment needs.
+
+## Files
+
+`eslintrc.js` - a barebones eslint configuration for 2021, that extends off of the recommended ESLint config and prettier
+
+`.prettierrc.js` - the prettier config
+
+`index.html` - the vite entrypoint, that includes the entry point for the client
+
+`postcss.config.cjs` - CommonJS module that defines the PostCSS config
+
+`server.ts` - The barebones Express server with logic for SSRing Vite pages
+
+`tailwind.config.cjs` - CommonJS module that defines the Tailwind config
+
+`tsconfig.json` - TypeScript configuration
+
+`vite.config.ts` - Vite configuration
+
+## CI
+
+We use GitHub actions to build the app. The badge is at the top of the repo. Currently it just confirms that everything builds properly.
+
+--- ./update.sh ---
+#!/bin/bash
+
+# ==============================================================================
+# INITIAL COMMIT
+# Create a git commit to save the current state before making any changes.
+# ==============================================================================
+echo "Creating a pre-patch commit..."
+git add .
+git commit -m "feat: Pre-server-utility-fix"
+echo "Commit created."
+
+# ==============================================================================
+# UPDATE THE SERVER UTILITY FILE (utils.ts)
+# The provided `utils.ts` file has an outdated `applyTransformationsToData`
+# function that expects the entire JSON object from the client. This is incorrect
+# for our new delta-based PATCH approach.
+#
+# This change updates the function to accept the `baseData` (loaded from the
+# server's disk) and the `delta` (the small payload from the client) as separate
+# arguments. It then applies the delta to the base data.
+#
+# Additionally, this update makes the `getJsonFiles` function more robust by
+# handling cases where data directories may not exist yet, preventing crashes.
+# ==============================================================================
+echo "Updating src/server/utils.ts to correctly handle delta payloads..."
+
+cat <<'EOF' > src/server/utils.ts
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from 'url';
+import { Request } from "express";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT_DIR = path.resolve(__dirname, '..', '..');
+
+// Directory paths
+export const SOURCE_DATA_DIR = path.join(ROOT_DIR, 'data_source');
+export const IN_PROGRESS_DATA_DIR = path.join(ROOT_DIR, 'data_in_progress');
+export const VALIDATED_DATA_DIR = path.join(ROOT_DIR, 'data_validated');
+
+
+export const getJsonFiles = async (): Promise<string[]> => {
+    // Reading directories can throw if they don't exist, so we handle that.
+    const readDirSafe = async (dir: string) => {
+        try {
+            return await fs.readdir(dir);
+        } catch (error: any) {
+            if (error.code === 'ENOENT') return []; // Directory doesn't exist
+            throw error; // Other errors
+        }
+    }
+    const sourceFiles = await readDirSafe(SOURCE_DATA_DIR);
+    const inProgressFiles = await readDirSafe(IN_PROGRESS_DATA_DIR);
+    const validatedFiles = await readDirSafe(VALIDATED_DATA_DIR);
+
+    const allFiles = new Set([
+        ...sourceFiles,
+        ...inProgressFiles,
+        ...validatedFiles,
+    ]);
+
+    return Array.from(allFiles)
+        .filter(f => f.endsWith(".json"))
+        .sort();
+};
+
+export const getFileStatus = async (jsonFilename: string): Promise<'validated' | 'in_progress' | 'source'> => {
+    const validatedPath = path.join(VALIDATED_DATA_DIR, jsonFilename);
+    const inProgressPath = path.join(IN_PROGRESS_DATA_DIR, jsonFilename);
+
+    try {
+        await fs.access(validatedPath);
+        return "validated";
+    } catch (e) { /* Not validated */ }
+
+    try {
+        await fs.access(inProgressPath);
+        return "in_progress";
+    } catch (e) { /* Not in progress */ }
+
+    return "source";
+};
+
+const fileExists = async (filePath: string): Promise<boolean> => {
+    try {
+        await fs.access(filePath);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export const loadData = async (jsonFilename: string): Promise<any | null> => {
+    const inProgressPath = path.join(IN_PROGRESS_DATA_DIR, jsonFilename);
+    const validatedPath = path.join(VALIDATED_DATA_DIR, jsonFilename);
+    const sourcePath = path.join(SOURCE_DATA_DIR, jsonFilename);
+
+    let loadPath: string | null = null;
+    if (await fileExists(inProgressPath)) {
+        loadPath = inProgressPath;
+    } else if (await fileExists(validatedPath)) {
+        loadPath = validatedPath;
+    } else if (await fileExists(sourcePath)) {
+        loadPath = sourcePath;
+    }
+
+    if (!loadPath) {
+        return null;
+    }
+
+    const fileContent = await fs.readFile(loadPath, 'utf-8');
+    return JSON.parse(fileContent);
+};
+
+/**
+ * Applies transformations from a delta object to a base data object.
+ * @param baseData The original, unmodified data object loaded from disk.
+ * @param delta The request body containing only the changes.
+ * @returns A new data object with the transformations applied.
+ */
+export const applyTransformationsToData = (baseData: any, delta: Request['body']) => {
+    // Create a deep copy to avoid mutating the original object
+    const data = JSON.parse(JSON.stringify(baseData));
+
+    const offsetX = parseFloat(delta.offsetX as string || "0");
+    const offsetY = parseFloat(delta.offsetY as string || "0");
+    const rotationDeg = parseFloat(delta.rotation as string || "0");
+    const scale = parseFloat(delta.scale as string || "1.0");
+
+    const isTransformed = offsetX !== 0 || offsetY !== 0 || rotationDeg !== 0 || scale !== 1.0;
+
+    let cosRad = 1, sinRad = 0;
+    const imgDims = data.image_dimensions || {};
+    const cx = (imgDims.width || 0) / 2;
+    const cy = (imgDims.height || 0) / 2;
+
+    if (isTransformed) {
+        const rotationRad = Math.PI / 180 * rotationDeg;
+        cosRad = Math.cos(rotationRad);
+        sinRad = Math.sin(rotationRad);
+    }
+
+    const allWords: { [id: string]: any } = {};
+    for (const line of data.lines || []) {
+        for (const word of line.words || []) {
+            // Ensure ID exists for mapping
+            if (word.id) {
+                allWords[word.id] = word;
+            }
+        }
+    }
+
+    for (const [key, value] of Object.entries(delta)) {
+        if (key.startsWith("text_")) {
+            const wordId = key.replace("text_", "");
+            if (allWords[wordId]) {
+                allWords[wordId].text = value;
+            }
+        }
+    }
+
+    if (isTransformed) {
+        for (const word of Object.values(allWords)) {
+            if (!word.bounding_box) continue;
+            const bbox = word.bounding_box;
+            const corners = [
+                { x: bbox.x_min, y: bbox.y_min },
+                { x: bbox.x_max, y: bbox.y_min },
+                { x: bbox.x_max, y: bbox.y_max },
+                { x: bbox.x_min, y: bbox.y_max },
+            ];
+
+            const transformedCorners = corners.map(({ x, y }) => {
+                const xScaled = cx + (x - cx) * scale;
+                const yScaled = cy + (y - cy) * scale;
+                const xRot = cx + (xScaled - cx) * cosRad - (yScaled - cy) * sinRad;
+                const yRot = cy + (xScaled - cx) * sinRad + (yScaled - cy) * cosRad;
+                return { x: xRot + offsetX, y: yRot + offsetY };
+            });
+
+            word.bounding_box = {
+                x_min: Math.round(Math.min(...transformedCorners.map(p => p.x))),
+                y_min: Math.round(Math.min(...transformedCorners.map(p => p.y))),
+                x_max: Math.round(Math.max(...transformedCorners.map(p => p.x))),
+                y_max: Math.round(Math.max(...transformedCorners.map(p => p.y))),
+            };
+        }
+    }
+    return data;
+};
+EOF
+
+echo "✅ src/server/utils.ts has been corrected."
+echo "The server logic now correctly handles the delta payload from the client."
+echo ""
+echo "Please restart your development server to apply the changes:"
+echo ""
+echo "pnpm dev"
+echo ""
+--- ./public/about.txt ---
+This favicon was generated using the following font:
+
+- Font Title: Lekton
+- Font Author: Copyright (c) 2008, 2009, 2010, Accademia di Belle Arti di Urbino (luciano.perondi@isiaurbino.net). Licensed under the SIL Open Font License, Version 1.1
+- Font Source: http://fonts.gstatic.com/s/lekton/v17/SZc43FDmLaWmWpBeXxfonUPL6Q.ttf
+- Font License: SIL Open Font License, 1.1 (http://scripts.sil.org/OFL))
+
+--- ./tailwind.config.cjs ---
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+
+--- ./.gitignore ---
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependency directories
+node_modules/
+/pnpm-lock.yaml
+
+# Build output
+dist
+dist-ssr
+*.local
+
+# IDEs
+.idea
+.vscode
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Data directories (specific to this app)
+data_in_progress/
+data_validated/
+
+# Tests
+/coverage
+#
+
+--- ./.nvmrc ---
+v20
+
+--- ./.github/workflows/nodejs.yml ---
+name: Node CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - name: pnpm install, build, and test
+        run: |
+          pnpm install
+          pnpm build
+          pnpm typecheck
+          pnpm test
+        env:
+          CI: true
+
+--- ./tsconfig.json ---
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true
+  },
+  "include": ["src", "server.ts", "types"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+
+--- ./vite.config.ts ---
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import type { UserConfig as VitestUserConfigInterface } from "vitest/config";
+
+const vitestConfig: VitestUserConfigInterface = {
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: ["src/__tests__/setupTests.ts"],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+    },
+  },
+};
+
+export default defineConfig({
+  plugins: [react()],
+  // The 'server' block with proxy settings has been removed.
+  // In our integrated SSR development setup, the Express server (server.ts)
+  // handles all requests, including API calls. The Vite server runs in
+  // middleware mode and does not need to proxy requests. This was causing
+  // the ECONNREFUSED error.
+  build: {
+    minify: false,
+  },
+  test: vitestConfig.test,
+});
+
+--- ./server.ts ---
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import express from "express";
+import compression from "compression";
+import cors from "cors";
+import { createServer as createViteServer } from "vite";
+import apiRouter from "./src/server/api";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const isTest = process.env.NODE_ENV === "test";
+const isProd = process.env.NODE_ENV === "production";
+
+async function createServer() {
+  const app = express();
+
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
+    appType: "custom",
+    logLevel: isTest ? "error" : "info",
+  });
+
+  app.use(vite.middlewares);
+
+  app.use(cors());
+  // Removed the { limit: '50mb' } configuration.
+  // The default limit is sufficient now that we send small PATCH deltas.
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // API routes
+  app.use("/api", apiRouter);
+
+  if (isProd) {
+    app.use(compression());
+    app.use(express.static(path.resolve(__dirname, "dist/client"), { index: false }));
+  }
+
+  // Serve static images from public directory
+  app.use("/public", express.static(path.resolve(__dirname, "public")));
+
+  app.use("*", async (req, res, next) => {
+    const url = req.originalUrl;
+
+    try {
+      const template = await fs.readFile(
+        isProd ? path.resolve(__dirname, "dist/client/index.html") : path.resolve(__dirname, "index.html"),
+        "utf-8"
+      );
+
+      const transformedTemplate = await vite.transformIndexHtml(url, template);
+
+      const { render } = await vite.ssrLoadModule(
+        isProd
+          ? "/dist/server/entry-server.js"
+          : "/src/client/entry-server.tsx"
+      );
+
+      const appHtml = await render(url);
+
+      const html = transformedTemplate.replace(`<!--app-html-->`, appHtml);
+
+      res.status(200).set({ "Content-Type": "text/html" }).end(html);
+    } catch (e) {
+      if (e instanceof Error) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      } else {
+        next(new Error("Unknown error during SSR"));
+      }
+    }
+  });
+
+  const port = process.env.PORT || 7456;
+  app.listen(Number(port), "0.0.0.0", () => {
+    console.log(`✅ Server is listening on http://localhost:${port}`);
+  });
+}
+
+// Create data directories on startup if they don't exist
+const dataDirs = ['data_source', 'data_in_progress', 'data_validated'];
+Promise.all(dataDirs.map(dir => fs.mkdir(dir, { recursive: true })))
+  .then(() => {
+    createServer();
+  })
+  .catch(err => {
+    console.error("Failed to create data directories:", err);
+    process.exit(1);
+  });
+
+--- ./src/server/utils.ts ---
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from 'url';
+import { Request } from "express";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT_DIR = path.resolve(__dirname, '..', '..');
+
+// Directory paths
+export const SOURCE_DATA_DIR = path.join(ROOT_DIR, 'data_source');
+export const IN_PROGRESS_DATA_DIR = path.join(ROOT_DIR, 'data_in_progress');
+export const VALIDATED_DATA_DIR = path.join(ROOT_DIR, 'data_validated');
+
+
+export const getJsonFiles = async (): Promise<string[]> => {
+    // Reading directories can throw if they don't exist, so we handle that.
+    const readDirSafe = async (dir: string) => {
+        try {
+            return await fs.readdir(dir);
+        } catch (error: any) {
+            if (error.code === 'ENOENT') return []; // Directory doesn't exist
+            throw error; // Other errors
+        }
+    }
+    const sourceFiles = await readDirSafe(SOURCE_DATA_DIR);
+    const inProgressFiles = await readDirSafe(IN_PROGRESS_DATA_DIR);
+    const validatedFiles = await readDirSafe(VALIDATED_DATA_DIR);
+
+    const allFiles = new Set([
+        ...sourceFiles,
+        ...inProgressFiles,
+        ...validatedFiles,
+    ]);
+
+    return Array.from(allFiles)
+        .filter(f => f.endsWith(".json"))
+        .sort();
+};
+
+export const getFileStatus = async (jsonFilename: string): Promise<'validated' | 'in_progress' | 'source'> => {
+    const validatedPath = path.join(VALIDATED_DATA_DIR, jsonFilename);
+    const inProgressPath = path.join(IN_PROGRESS_DATA_DIR, jsonFilename);
+
+    try {
+        await fs.access(validatedPath);
+        return "validated";
+    } catch (e) { /* Not validated */ }
+
+    try {
+        await fs.access(inProgressPath);
+        return "in_progress";
+    } catch (e) { /* Not in progress */ }
+
+    return "source";
+};
+
+const fileExists = async (filePath: string): Promise<boolean> => {
+    try {
+        await fs.access(filePath);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export const loadData = async (jsonFilename: string): Promise<any | null> => {
+    const inProgressPath = path.join(IN_PROGRESS_DATA_DIR, jsonFilename);
+    const validatedPath = path.join(VALIDATED_DATA_DIR, jsonFilename);
+    const sourcePath = path.join(SOURCE_DATA_DIR, jsonFilename);
+
+    let loadPath: string | null = null;
+    if (await fileExists(inProgressPath)) {
+        loadPath = inProgressPath;
+    } else if (await fileExists(validatedPath)) {
+        loadPath = validatedPath;
+    } else if (await fileExists(sourcePath)) {
+        loadPath = sourcePath;
+    }
+
+    if (!loadPath) {
+        return null;
+    }
+
+    const fileContent = await fs.readFile(loadPath, 'utf-8');
+    return JSON.parse(fileContent);
+};
+
+/**
+ * Applies transformations from a delta object to a base data object.
+ * @param baseData The original, unmodified data object loaded from disk.
+ * @param delta The request body containing only the changes.
+ * @returns A new data object with the transformations applied.
+ */
+export const applyTransformationsToData = (baseData: any, delta: Request['body']) => {
+    // Create a deep copy to avoid mutating the original object
+    const data = JSON.parse(JSON.stringify(baseData));
+
+    const offsetX = parseFloat(delta.offsetX as string || "0");
+    const offsetY = parseFloat(delta.offsetY as string || "0");
+    const rotationDeg = parseFloat(delta.rotation as string || "0");
+    const scale = parseFloat(delta.scale as string || "1.0");
+
+    const isTransformed = offsetX !== 0 || offsetY !== 0 || rotationDeg !== 0 || scale !== 1.0;
+
+    let cosRad = 1, sinRad = 0;
+    const imgDims = data.image_dimensions || {};
+    const cx = (imgDims.width || 0) / 2;
+    const cy = (imgDims.height || 0) / 2;
+
+    if (isTransformed) {
+        const rotationRad = Math.PI / 180 * rotationDeg;
+        cosRad = Math.cos(rotationRad);
+        sinRad = Math.sin(rotationRad);
+    }
+
+    const allWords: { [id: string]: any } = {};
+    for (const line of data.lines || []) {
+        for (const word of line.words || []) {
+            // Ensure ID exists for mapping
+            if (word.id) {
+                allWords[word.id] = word;
+            }
+        }
+    }
+
+    for (const [key, value] of Object.entries(delta)) {
+        if (key.startsWith("text_")) {
+            const wordId = key.replace("text_", "");
+            if (allWords[wordId]) {
+                allWords[wordId].text = value;
+            }
+        }
+    }
+
+    if (isTransformed) {
+        for (const word of Object.values(allWords)) {
+            if (!word.bounding_box) continue;
+            const bbox = word.bounding_box;
+            const corners = [
+                { x: bbox.x_min, y: bbox.y_min },
+                { x: bbox.x_max, y: bbox.y_min },
+                { x: bbox.x_max, y: bbox.y_max },
+                { x: bbox.x_min, y: bbox.y_max },
+            ];
+
+            const transformedCorners = corners.map(({ x, y }) => {
+                const xScaled = cx + (x - cx) * scale;
+                const yScaled = cy + (y - cy) * scale;
+                const xRot = cx + (xScaled - cx) * cosRad - (yScaled - cy) * sinRad;
+                const yRot = cy + (xScaled - cx) * sinRad + (yScaled - cy) * cosRad;
+                return { x: xRot + offsetX, y: yRot + offsetY };
+            });
+
+            word.bounding_box = {
+                x_min: Math.round(Math.min(...transformedCorners.map(p => p.x))),
+                y_min: Math.round(Math.min(...transformedCorners.map(p => p.y))),
+                x_max: Math.round(Math.max(...transformedCorners.map(p => p.x))),
+                y_max: Math.round(Math.max(...transformedCorners.map(p => p.y))),
+            };
+        }
+    }
+    return data;
+};
+
+--- ./src/server/api.ts ---
+import { Router, Request, Response } from "express";
+import fs from 'fs/promises';
+import path from 'path';
+import {
+    getJsonFiles,
+    getFileStatus,
+    loadData,
+    applyTransformationsToData,
+    SOURCE_DATA_DIR,
+    IN_PROGRESS_DATA_DIR,
+    VALIDATED_DATA_DIR
+} from './utils.js';
+
+const router = Router();
+
+// Route to get the list of all files and their statuses
+router.get("/files", async (req: Request, res: Response) => {
+    try {
+        const files = await getJsonFiles();
+        const fileStatuses = await Promise.all(
+            files.map(async (f) => ({
+                filename: f,
+                status: await getFileStatus(f),
+            }))
+        );
+        res.json(fileStatuses);
+    } catch (error) {
+        console.error("Error getting files:", error);
+        res.status(500).json({ error: "Failed to retrieve file list." });
+    }
+});
+
+
+// Route to get data for a specific file
+router.get("/files/:json_filename", async (req: Request, res: Response) => {
+    try {
+        const data = await loadData(req.params.json_filename);
+        if (!data) {
+            return res.status(404).json({ error: "File not found." });
+        }
+        res.json(data);
+    } catch (error) {
+        console.error(`Error loading data for ${req.params.json_filename}:`, error);
+        res.status(500).json({ error: "Failed to load file data." });
+    }
+});
+
+
+// Route to autosave progress
+router.patch("/autosave/:json_filename", async (req: Request, res: Response) => {
+    const { json_filename } = req.params;
+    try {
+        const baseData = await loadData(json_filename);
+        if (!baseData) {
+            return res.status(404).json({ error: "Cannot autosave, base file not found."});
+        }
+
+        const transformedData = applyTransformationsToData(baseData, req.body);
+        const savePath = path.join(IN_PROGRESS_DATA_DIR, json_filename);
+        await fs.writeFile(savePath, JSON.stringify(transformedData, null, 2));
+        res.json({ status: "ok", message: "Draft saved." });
+    } catch (error) {
+        console.error(`Error autosaving ${json_filename}:`, error);
+        res.status(500).json({ error: "Failed to save draft." });
+    }
+});
+
+// Route to commit final changes
+router.patch("/commit/:json_filename", async (req: Request, res: Response) => {
+    const { json_filename } = req.params;
+    try {
+        const baseData = await loadData(json_filename);
+        if (!baseData) {
+            return res.status(404).json({ error: "Cannot commit, base file not found." });
+        }
+
+        const transformedData = applyTransformationsToData(baseData, req.body);
+        transformedData.validated = true;
+
+        const validatedPath = path.join(VALIDATED_DATA_DIR, json_filename);
+        await fs.writeFile(validatedPath, JSON.stringify(transformedData, null, 2));
+
+        const inProgressPath = path.join(IN_PROGRESS_DATA_DIR, json_filename);
+        try {
+            await fs.unlink(inProgressPath);
+        } catch (e: any) {
+            if (e.code !== 'ENOENT') console.error(`Could not remove in-progress file: ${e.message}`);
+        }
+
+        const allFiles = await getJsonFiles();
+        const currentIndex = allFiles.indexOf(json_filename);
+
+        let nextFile = null;
+        if (currentIndex !== -1) {
+            for (let i = currentIndex + 1; i < allFiles.length; i++) {
+                const status = await getFileStatus(allFiles[i]);
+                if (status !== 'validated') {
+                    nextFile = allFiles[i];
+                    break;
+                }
+            }
+        }
+
+        res.json({ status: "ok", message: "Committed successfully.", nextFile });
+
+    } catch (error) {
+        console.error(`Error committing ${json_filename}:`, error);
+        res.status(500).json({ error: "Failed to commit changes." });
+    }
+});
+
+
+// Route to get original source data
+router.get("/source-data/:json_filename", async (req: Request, res: Response) => {
+    const { json_filename } = req.params;
+    try {
+        const sourcePath = path.join(SOURCE_DATA_DIR, json_filename);
+        const data = await fs.readFile(sourcePath, 'utf-8');
+        res.json(JSON.parse(data));
+    } catch (error) {
+        res.status(404).json({ error: `Source file '${json_filename}' not found.` });
+    }
+});
+
+
+export default router;
+
+--- ./src/server/routes/api.ts ---
+import { Request, Response } from "express";
+
+/**
+ * List of API examples.
+ * @route GET /api
+ */
+export const getApi = async (req: Request, res: Response) => {
+  return res.status(200).end();
+};
+
+--- ./src/__tests__/testingHook.ts ---
+import { useState, useCallback } from "react";
+
+export default function useCounter() {
+  const [count, setCount] = useState(0);
+  const increment = useCallback(() => setCount(x => x + 1), []);
+  return { count, increment };
+}
+
+--- ./src/__tests__/demo.test.tsx ---
+import React from "react";
+import { render, renderHook, act } from "@testing-library/react";
+import { Footer } from "../client/components/Footer";
+import useCounter from "./testingHook";
+import { describe, test } from "vitest";
+describe("demo", () => {
+  test("should be testable", ({ expect }) => {
+    expect(1 + 1).toBe(2);
+  });
+  test("should be able to test component", ({ expect }) => {
+    const { getByText } = render(<Footer />);
+    expect(getByText("Repo")).toBeInTheDocument();
+  });
+  test("should be able to test hook", ({ expect }) => {
+    const { result } = renderHook(() => useCounter());
+    act(() => {
+      result.current.increment();
+    });
+    expect(result.current.count).toBe(1);
+  });
+});
+
+--- ./src/__tests__/setupTests.ts ---
+import '@testing-library/jest-dom';
+
+--- ./src/__tests__/HomePage.test.tsx ---
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { rest } from 'msw';
+import { setupServer } from 'msw/node';
+import HomePage from '../pages/HomePage';
+import { describe, test, expect, beforeAll, afterEach, afterAll } from 'vitest';
+
+const server = setupServer(
+  rest.get('/api/files', (req, res, ctx) => {
+    return res(ctx.json([
+      { filename: 'test1.json', status: 'validated' },
+      { filename: 'test2.json', status: 'in_progress' },
+    ]));
+  })
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+describe('HomePage', () => {
+  test('renders file list from API', async () => {
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/loading files/i)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText('test1.json')).toBeInTheDocument();
+      expect(screen.getByText('Validated ✓')).toBeInTheDocument();
+      expect(screen.getByText('test2.json')).toBeInTheDocument();
+      expect(screen.getByText('In Progress...')).toBeInTheDocument();
+    });
+  });
+});
+
+--- ./src/client/App.tsx ---
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
+import ValidatePage from "./pages/ValidatePage";
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/validate/:json_filename" element={<ValidatePage />} />
+    </Routes>
+  );
+}
+
+export default App;
+
+--- ./src/client/entry-client.tsx ---
+import React from 'react';
+import { hydrateRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App';
+import './index.css';
+
+hydrateRoot(
+  document.getElementById('root') as HTMLElement,
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+);
+
+--- ./src/client/index.css ---
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  The following CSS has been ported from the original style.css.
+  While this app now uses TailwindCSS, these more complex rules for the
+  image overlay and bounding boxes have been kept for convenience.
+  They can be refactored into Tailwind classes over time.
+*/
+
+.image-wrapper {
+  position: relative;
+  /* This is crucial for positioning the overlay */
+  display: inline-block;
+  /* Shrink-wrap the container to the image size */
+  overflow: hidden;
+}
+
+.image-wrapper img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* The overlay that contains all boxes and is draggable */
+#bbox-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  /* Indicates this element is draggable */
+  transform-origin: center center;
+}
+
+#bbox-overlay.dragging {
+  cursor: grabbing;
+  /* Change cursor while dragging */
+}
+
+/* Individual bounding box style */
+.bounding-box {
+  position: absolute;
+  box-sizing: border-box;
+  /* Ensures border width is included in element's size */
+  border: 2px solid red;
+  background-color: rgb(255 0 0 / 10%);
+  /* Slight red tint inside */
+}
+
+/* Label for each box */
+.box-label {
+  position: absolute;
+  top: -20px;
+  /* Position above the box */
+  left: 0;
+  background-color: red;
+  color: white;
+  font-size: 14px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: bold;
+  user-select: none;
+}
+
+/* Make the body and html take up the full height of the browser window */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f9;
+}
+
+#autosave-status.status-progress {
+  color: #007bff;
+  font-style: italic;
+}
+#autosave-status.status-validated {
+  color: #28a745;
+}
+#autosave-status.status-error {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+--- ./src/client/components/ImagePane.tsx ---
+import React, { useRef, useState, useEffect } from 'react';
+import type { Annotation, TransformationState } from '../../types/types';
+import BoundingBox from './BoundingBox';
+
+interface ImagePaneProps {
+  imageSrc: string;
+  annotations: Annotation[];
+  transformation: TransformationState;
+  onTransformationChange: (newTransformation: TransformationState) => void;
+}
+
+const ImagePane: React.FC<ImagePaneProps> = ({ imageSrc, annotations, transformation, onTransformationChange }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const initialTransform = useRef({ offsetX: 0, offsetY: 0 });
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    initialTransform.current = { offsetX: transformation.offsetX, offsetY: transformation.offsetY };
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    onTransformationChange({
+      ...transformation,
+      offsetX: initialTransform.current.offsetX + dx,
+      offsetY: initialTransform.current.offsetY + dy,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    const handleMouseUpGlobal = () => setIsDragging(false);
+    window.addEventListener('mouseup', handleMouseUpGlobal);
+    return () => window.removeEventListener('mouseup', handleMouseUpGlobal);
+  }, []);
+
+  return (
+    <div className="flex justify-center items-start">
+        <div className="image-wrapper" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+            <img src={imageSrc} alt="Document for validation" />
+            <div
+                id="bbox-overlay"
+                className={isDragging ? 'dragging' : ''}
+                style={{
+                    transform: `translate(${transformation.offsetX}px, ${transformation.offsetY}px) rotate(${transformation.rotation}deg) scale(${transformation.scale})`,
+                }}
+                onMouseDown={handleMouseDown}
+            >
+                {annotations.map((word) => (
+                    <BoundingBox key={word.id} word={word} />
+                ))}
+            </div>
+        </div>
+    </div>
+  );
+};
+
+export default ImagePane;
+
+--- ./src/client/components/Footer.tsx ---
+import React from "react";
+
+export const Footer = () => {
+  return (
+    <footer className={"justify-center items-center"}>
+      &copy; {new Date().getFullYear()} - <a href={"https://jonlu.ca"}>JonLuca DeCaro</a> -{" "}
+      <a className={"p-1"} href={"https://github.com/jonluca/vite-typescript-ssr-react"}>
+        Repo
+      </a>
+    </footer>
+  );
+};
+
+--- ./src/client/components/BoundingBox.tsx ---
+import React from 'react';
+import type { Annotation } from '../../types/types';
+
+interface BoundingBoxProps {
+  word: Annotation;
+}
+
+const BoundingBox: React.FC<BoundingBoxProps> = ({ word }) => {
+  const { bounding_box: bbox, display_id } = word;
+
+  if (!bbox) return null;
+
+  const style: React.CSSProperties = {
+    left: `${bbox.x_min}px`,
+    top: `${bbox.y_min}px`,
+    width: `${bbox.x_max - bbox.x_min}px`,
+    height: `${bbox.y_max - bbox.y_min}px`,
+  };
+
+  return (
+    <div className="bounding-box" style={style}>
+      <span className="box-label">{display_id}</span>
+    </div>
+  );
+};
+
+export default BoundingBox;
+
+--- ./src/client/components/FormPane.tsx ---
+import React from 'react';
+import type { Annotation, TextState } from '../../types/types';
+
+interface FormPaneProps {
+  annotations: Annotation[];
+  textState: TextState;
+  onTextChange: (wordId: string, newText: string) => void;
+  autosaveStatus: { message: string, type: string };
+  onCommit: () => void;
+  onBack: () => void;
+}
+
+const FormPane: React.FC<FormPaneProps> = ({ annotations, textState, onTextChange, autosaveStatus, onCommit, onBack }) => {
+  return (
+    <>
+      <div className="p-6 border-b border-gray-200">
+        <h3 className="text-2xl font-semibold text-gray-800">Word Transcriptions</h3>
+        <span id="autosave-status" className={`text-sm mt-1 ${autosaveStatus.type}`}>
+          {autosaveStatus.message}
+        </span>
+      </div>
+      <div className="flex-grow overflow-y-auto p-6">
+        <form onSubmit={(e) => { e.preventDefault(); onCommit(); }} className="space-y-4">
+          {annotations.map((word) => (
+            <div key={word.id} className="form-group">
+              <label htmlFor={`text_${word.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+                Word {word.display_id}:
+              </label>
+              <input
+                type="text"
+                id={`text_${word.id}`}
+                name={`text_${word.id}`}
+                value={textState[word.id] || ''}
+                onChange={(e) => onTextChange(word.id, e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          ))}
+        </form>
+      </div>
+      <div className="p-6 border-t border-gray-200 bg-gray-50">
+        <div className="flex gap-4">
+            <button
+                type="button"
+                onClick={onCommit}
+                className="w-full px-4 py-3 font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+                Commit & Next
+            </button>
+            <button
+                type="button"
+                onClick={onBack}
+                className="w-full px-4 py-3 font-semibold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+            >
+                Back to List
+            </button>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default FormPane;
+
+--- ./src/client/components/Controls.tsx ---
+import React from 'react';
+
+interface ControlsProps {
+  state: any;
+  setState: (newState: any) => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onRevert: () => void;
+}
+
+const Controls: React.FC<ControlsProps> = ({ state, setState, onUndo, onRedo, canUndo, canRedo, onRevert }) => {
+
+  const handleTransformChange = (key: string, value: number) => {
+    setState({ ...state, trans: { ...state.trans, [key]: value } });
+  };
+
+  const { rotation, scale, offsetX, offsetY } = state.trans;
+
+  return (
+    <div className="bg-gray-100 p-4 rounded-lg border border-gray-300 mb-6 space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Rotation */}
+        <div className="flex items-center space-x-3">
+          <label htmlFor="rotate-slider" className="font-medium text-gray-700 w-20">Rotate:</label>
+          <input type="range" id="rotate-slider" min="-45" max="45" value={rotation} step="0.1"
+            onChange={(e) => handleTransformChange('rotation', parseFloat(e.target.value))}
+            className="flex-grow" />
+          <input type="number" value={rotation.toFixed(1)} step="0.1"
+            onChange={(e) => handleTransformChange('rotation', parseFloat(e.target.value))}
+            className="w-24 p-1 border rounded-md text-sm" />
+          <span>°</span>
+        </div>
+
+        {/* Scale */}
+        <div className="flex items-center space-x-3">
+          <label htmlFor="scale-slider" className="font-medium text-gray-700 w-20">Scale:</label>
+          <input type="range" id="scale-slider" min="0.1" max="2.0" value={scale} step="0.01"
+            onChange={(e) => handleTransformChange('scale', parseFloat(e.target.value))}
+            className="flex-grow" />
+          <input type="number" value={scale.toFixed(2)} step="0.01"
+            onChange={(e) => handleTransformChange('scale', parseFloat(e.target.value))}
+            className="w-24 p-1 border rounded-md text-sm" />
+          <span>x</span>
+        </div>
+
+        {/* Translation */}
+        <div className="flex items-center space-x-3 col-span-1 md:col-span-2">
+          <label className="font-medium text-gray-700 w-20">Translate:</label>
+          <input type="number" value={Math.round(offsetX)} placeholder="X" step="1"
+            onChange={(e) => handleTransformChange('offsetX', parseFloat(e.target.value))}
+            className="w-24 p-1 border rounded-md text-sm" />
+          <input type="number" value={Math.round(offsetY)} placeholder="Y" step="1"
+            onChange={(e) => handleTransformChange('offsetY', parseFloat(e.target.value))}
+            className="w-24 p-1 border rounded-md text-sm" />
+          <span>px</span>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="pt-4 border-t border-gray-300 flex items-center gap-2">
+        <button onClick={onUndo} disabled={!canUndo} className="px-4 py-2 text-sm font-semibold text-white bg-gray-500 rounded-md hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed">Undo</button>
+        <button onClick={onRedo} disabled={!canRedo} className="px-4 py-2 text-sm font-semibold text-white bg-gray-500 rounded-md hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed">Redo</button>
+        <button onClick={onRevert} className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-md hover:bg-red-600">Revert to Original</button>
+      </div>
+    </div>
+  );
+};
+
+export default Controls;
+
+--- ./src/client/entry-server.tsx ---
+import React from 'react';
+import ReactDOMServer from 'react-dom/server';
+import { StaticRouter } from 'react-router-dom/server';
+import App from './App';
+import './index.css';
+
+export function render(url: string) {
+  return ReactDOMServer.renderToString(
+    <React.StrictMode>
+      <StaticRouter location={url}>
+        <App />
+      </StaticRouter>
+    </React.StrictMode>
+  );
+}
+
+--- ./src/client/hooks/useUndoableState.ts ---
+import { useState, useCallback } from 'react';
+
+export const useUndoableState = <T>(initialState: T) => {
+  const [history, setHistory] = useState<T[]>([initialState]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const state = history[currentIndex];
+
+  const setState = useCallback((newState: T, fromInitial?: boolean) => {
+    if (JSON.stringify(newState) === JSON.stringify(state) && !fromInitial) {
+      return;
+    }
+
+    if (fromInitial) {
+        setHistory([newState]);
+        setCurrentIndex(0);
+        return;
+    }
+
+    const newHistory = history.slice(0, currentIndex + 1);
+    newHistory.push(newState);
+    setHistory(newHistory);
+    setCurrentIndex(newHistory.length - 1);
+  }, [history, currentIndex, state]);
+
+  const undo = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  }, [currentIndex]);
+
+  const redo = useCallback(() => {
+    if (currentIndex < history.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  }, [currentIndex, history.length]);
+
+  const resetState = useCallback((resetToState: T) => {
+    setHistory([resetToState]);
+    setCurrentIndex(0);
+  }, []);
+
+  const canUndo = currentIndex > 0;
+  const canRedo = currentIndex < history.length - 1;
+
+  return [state, setState, undo, redo, resetState, canUndo, canRedo] as const;
+};
+
+--- ./src/client/hooks/useDebounce.ts ---
+import { useState, useEffect } from 'react';
+
+export const useDebounce = <T>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    // Set debouncedValue to value (passed in) after the specified delay
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    // Return a cleanup function that will be called every time ...
+    // ... useEffect is re-called. useEffect will only be re-called ...
+    // ... if value changes (see the inputs array below).
+    // This is how we prevent debouncedValue from changing if value is ...
+    // ... changing within the delay period. Timeout gets cleared and restarted.
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]); // Only re-call effect if value or delay changes
+
+  return debouncedValue;
+};
+
+--- ./src/client/Context.tsx ---
+import React, { useContext, useState } from "react";
+
+export interface Context {
+  name: string;
+  setName: (val: string) => void;
+}
+const defaultVal = {
+  name: "",
+  setName: () => {},
+} as Context;
+
+const context = React.createContext(defaultVal);
+
+const { Provider } = context;
+
+export const ContextWrapper = ({ children }: { children: any }) => {
+  const [name, setName] = useState(defaultVal.name);
+  return <Provider value={{ name, setName }}>{children}</Provider>;
+};
+
+export const useAppContext = () => useContext(context);
+
+--- ./src/client/pages/Main.tsx ---
+import React from "react";
+import { Footer } from "../components/Footer";
+import { useAppContext } from "../Context";
+
+const Main = () => {
+  const { name, setName } = useAppContext();
+  return (
+    <div className="flex bg-white-100 font-sans items-center flex-col justify-between h-screen">
+      <div className="flex items-center flex-col pt-10">
+        <h1 className="font-bold text-gray-900 text-5xl lg:text-7xl text-center ">Hi{name ? `, ${name}!` : ""}</h1>
+        <h2 className={"w-2/5 p-5 items-center flex align-middle text-center min-w-[320px]"} style={{ color: "green" }}>
+          This is a Vite React SSR Tailwind boilerplate!
+        </h2>
+        <input
+          placeholder={"Enter your name"}
+          onChange={e => setName(e.currentTarget.value)}
+          style={{ background: "#8080802e" }}
+          className="focus:ring-indigo-500 focus:border-indigo-500 block w-full text-2xl border-gray-300 rounded-md p-2"
+        />
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+export default Main;
+
+--- ./src/client/pages/ValidatePage.tsx ---
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useUndoableState } from '../hooks/useUndoableState';
+import { useDebounce } from '../hooks/useDebounce';
+import Controls from '../components/Controls';
+import ImagePane from '../components/ImagePane';
+import FormPane from '../components/FormPane';
+import type { ValidationData, Annotation, TransformationState, TextState } from '../../types/types';
+
+const ValidatePage: React.FC = () => {
+    const { json_filename } = useParams<{ json_filename: string }>();
+    const navigate = useNavigate();
+
+    // This state holds the original, unmodified data structure, used as a base.
+    const [baseData, setBaseData] = useState<ValidationData | null>(null);
+    const [annotations, setAnnotations] = useState<Annotation[]>([]);
+
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [autosaveStatus, setAutosaveStatus] = useState({ message: '', type: ''});
+
+    const [
+        state,
+        setState,
+        undo,
+        redo,
+        resetState,
+        canUndo,
+        canRedo
+    ] = useUndoableState<{ trans: TransformationState, texts: TextState }>({
+        trans: { offsetX: 0, offsetY: 0, rotation: 0, scale: 1.0 },
+        texts: {}
+    });
+
+    const debouncedState = useDebounce(state, 1000);
+
+    const initializeStates = (initialData: ValidationData) => {
+        let wordCounter = 0;
+        const processedAnnotations: Annotation[] = [];
+        const initialTexts: TextState = {};
+
+        initialData.lines.forEach((line, line_idx) => {
+            line.words.forEach((word, word_idx) => {
+                const wordId = word.id || `${line_idx}_${word_idx}`;
+                word.id = wordId;
+
+                processedAnnotations.push({
+                    ...word,
+                    id: wordId,
+                    display_id: wordCounter + 1,
+                });
+                initialTexts[wordId] = word.text;
+                wordCounter++;
+            });
+        });
+
+        setBaseData(initialData);
+        setAnnotations(processedAnnotations);
+
+        const initialState = {
+            trans: { offsetX: 0, offsetY: 0, rotation: 0, scale: 1.0 },
+            texts: initialTexts
+        };
+        resetState(initialState);
+    };
+
+    useEffect(() => {
+        if (!json_filename) return;
+        setLoading(true);
+        fetch(`/api/files/${json_filename}`)
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                return res.json();
+            })
+            .then((initialData: ValidationData) => {
+                initializeStates(initialData);
+                setError(null);
+            })
+            .catch(err => setError(err.message))
+            .finally(() => setLoading(false));
+    }, [json_filename, resetState]);
+
+    const autoSave = useCallback(async (currentState: { trans: TransformationState, texts: TextState }) => {
+        if (!json_filename || !baseData) return;
+
+        setAutosaveStatus({ message: "Saving...", type: "status-progress" });
+
+        const formData = new URLSearchParams();
+        Object.entries(currentState.trans).forEach(([key, value]) => formData.append(key, value.toString()));
+        Object.entries(currentState.texts).forEach(([key, value]) => formData.append(`text_${key}`, value));
+
+        try {
+            const response = await fetch(`/api/autosave/${json_filename}`, {
+                method: 'PATCH', // Using PATCH for partial updates
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData,
+            });
+            if (!response.ok) throw new Error("Autosave failed on server");
+            setAutosaveStatus({ message: "Draft Saved ✓", type: "status-validated" });
+        } catch (err) {
+            setAutosaveStatus({ message: "Save Failed!", type: "status-error" });
+            console.error(err);
+        }
+    }, [json_filename, baseData]);
+
+    useEffect(() => {
+        if (debouncedState && (canUndo || canRedo)) {
+            autoSave(debouncedState);
+        }
+    }, [debouncedState, autoSave, canUndo, canRedo]);
+
+
+    const handleRevert = async () => {
+        if (!json_filename || !window.confirm('Revert to original? This will overwrite your current draft.')) return;
+
+        try {
+            setAutosaveStatus({ message: "Reverting...", type: "status-progress" });
+            const response = await fetch(`/api/source-data/${json_filename}`);
+            if (!response.ok) throw new Error('Failed to fetch source data.');
+
+            const sourceData = await response.json();
+            initializeStates(sourceData);
+            const sourceTexts = sourceData.lines.flatMap((l: any) => l.words).reduce((acc: any, w: any) => ({...acc, [w.id]: w.text}), {});
+            await autoSave({ trans: { offsetX: 0, offsetY: 0, rotation: 0, scale: 1.0 }, texts: sourceTexts });
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Unknown error during revert.');
+        }
+    };
+
+    const handleCommit = async () => {
+        if (!json_filename || !baseData) return;
+
+        const formData = new URLSearchParams();
+        Object.entries(state.trans).forEach(([key, value]) => formData.append(key, value.toString()));
+        Object.entries(state.texts).forEach(([key, value]) => formData.append(`text_${key}`, value));
+
+        try {
+            const response = await fetch(`/api/commit/${json_filename}`, {
+                method: 'PATCH', // Using PATCH for partial updates
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData,
+            });
+            if (!response.ok) throw new Error("Commit failed on server");
+            const result = await response.json();
+            if (result.nextFile) {
+                navigate(`/validate/${result.nextFile}`);
+            } else {
+                navigate('/');
+            }
+        } catch (err) {
+            setAutosaveStatus({ message: "Commit Failed!", type: "status-error" });
+            console.error(err);
+        }
+    };
+
+    if (loading) return <div className="p-8 text-xl">Loading...</div>;
+    if (error) return <div className="p-8 text-xl text-red-500">Error: {error}</div>;
+    if (!baseData) return <div className="p-8 text-xl">No data found.</div>;
+
+    return (
+        <div className="flex h-screen bg-gray-50">
+            <div className="flex-grow p-6 overflow-y-auto">
+                <Controls
+                    state={state}
+                    setState={setState}
+                    onUndo={undo}
+                    onRedo={redo}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    onRevert={handleRevert}
+                />
+                <ImagePane
+                    imageSrc={`/images/${baseData.image_source}`}
+                    annotations={annotations}
+                    transformation={state.trans}
+                    onTransformationChange={(newTrans) => setState({ ...state, trans: newTrans })}
+                />
+            </div>
+            <div className="w-1/3 max-w-md h-full flex flex-col border-l border-gray-200 bg-white">
+                <FormPane
+                    annotations={annotations}
+                    textState={state.texts}
+                    onTextChange={(wordId, newText) => setState({ ...state, texts: { ...state.texts, [wordId]: newText } })}
+                    autosaveStatus={autosaveStatus}
+                    onCommit={handleCommit}
+                    onBack={() => navigate('/')}
+                />
+            </div>
+        </div>
+    );
+};
+
+export default ValidatePage;
+
+--- ./src/client/pages/HomePage.tsx ---
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+
+interface FileStatus {
+  filename: string;
+  status: "validated" | "in_progress" | "source";
+}
+
+const statusStyles = {
+  validated: "text-green-600 font-semibold",
+  in_progress: "text-blue-600",
+  source: "text-gray-500",
+};
+
+const statusText = {
+  validated: "Validated ✓",
+  in_progress: "In Progress...",
+  source: "",
+};
+
+
+const HomePage: React.FC = () => {
+  const [files, setFiles] = useState<FileStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchFiles = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch("/api/files");
+        if (!response.ok) {
+          throw new Error("Failed to fetch files");
+        }
+        const data: FileStatus[] = await response.json();
+        setFiles(data);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An unknown error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFiles();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-4xl bg-white rounded-lg shadow-xl p-8">
+        <h1 className="text-4xl font-bold text-gray-800 mb-2">
+          Transcription Validation
+        </h1>
+        <p className="text-gray-600 mb-8">
+          Select a file to validate. Status will be shown.
+        </p>
+        {loading && <p>Loading files...</p>}
+        {error && <p className="text-red-500">{error}</p>}
+        {!loading && !error && (
+          <ul className="divide-y divide-gray-200">
+            {files.length > 0 ? (
+              files.map((file) => (
+                <li key={file.filename} className="py-4 flex justify-between items-center">
+                  <Link
+                    to={`/validate/${file.filename}`}
+                    className="text-lg text-blue-700 hover:text-blue-900 hover:underline font-medium"
+                  >
+                    {file.filename}
+                  </Link>
+                  <span className={`text-sm ${statusStyles[file.status]}`}>
+                    {statusText[file.status]}
+                  </span>
+                </li>
+              ))
+            ) : (
+              <li className="py-4 text-gray-500">
+                No JSON files found in any data directory.
+              </li>
+            )}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default HomePage;
+
