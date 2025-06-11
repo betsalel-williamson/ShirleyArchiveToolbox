@@ -20,7 +20,7 @@ def order_points(pts):
 def main():
     # --- 1. Argument Parser ---
     ap = argparse.ArgumentParser(
-        description="Auto-crop by creating a bounding box around all detected content."
+        description="Auto-crop by creating a bounding box around filtered content."
     )
     ap.add_argument("-i", "--image", required=True, help="Path to the input image")
     ap.add_argument(
@@ -63,37 +63,54 @@ def main():
     closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
     cv2.imwrite(output_path.replace(".jpg", "_closed.jpg"), closed)
 
-    # --- 4. Find all content blobs and combine them ---
-    print("[INFO] Finding all content blobs and creating a 'point cloud'...")
+    # --- 4. Find all content blobs, filter them, and combine ---
+    print("[INFO] Finding and filtering content blobs to create a 'point cloud'...")
     contours, _ = cv2.findContours(
         closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
 
+    # *** NEW: Add dimension thresholds for filtering ***
     contour_area_threshold = 100
+    dimension_threshold = 40  # The minimum width or height in pixels
     all_contour_points = []
+
     for c in contours:
-        if cv2.contourArea(c) > contour_area_threshold:
+        # Get the non-rotated bounding box
+        x, y, w, h = cv2.boundingRect(c)
+
+        # Apply all three filters
+        if (
+            cv2.contourArea(c) > contour_area_threshold
+            and w > dimension_threshold
+            and h > dimension_threshold
+        ):
             all_contour_points.append(c)
+        else:
+            # Optional: Log which contours are being filtered out for debugging
+            print(f"[DEBUG] Filtering out contour with area={cv2.contourArea(c):.0f}, w={w}, h={h}")
+            pass
 
     if not all_contour_points:
         print(
-            "[ERROR] No significant content contours found. Try adjusting Canny or blur settings."
+            "[ERROR] No significant content contours found after filtering. "
+            "Try adjusting blur, Canny, or filter thresholds."
         )
         return
 
     point_cloud = np.vstack(all_contour_points)
 
     # --- 5. Find the Bounding Box of the Point Cloud ---
-    print("[INFO] Calculating the tightest rotated bounding box for the content...")
+    print(
+        "[INFO] Calculating the tightest rotated bounding box for the filtered content..."
+    )
     rect = cv2.minAreaRect(point_cloud)
     box = cv2.boxPoints(rect)
+    box = np.int32(box)  # Use np.int32 for modern numpy compatibility
 
-    # *** FIX 1: Use np.int32 instead of the deprecated np.int0 or incorrect np.int8 ***
-    box = np.int32(box)
-
-    # *** FIX 2: Add a check to ensure the box has points before proceeding ***
     if box.size == 0:
-        print("[ERROR] Could not determine a valid bounding box from the contours.")
+        print(
+            "[ERROR] Could not determine a valid bounding box from the filtered contours."
+        )
         return
 
     ordered_pts = order_points(box)
