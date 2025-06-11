@@ -1,2 +1,5 @@
-opencv-python
+google-generativeai
 numpy
+opencv-python
+Pillow
+python-dotenv
