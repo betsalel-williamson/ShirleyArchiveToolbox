@@ -1,10 +1,88 @@
-@import "tailwindcss/base";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@import "tailwindcss/components";
+/*
+  The following CSS has been ported from the original style.css.
+  While this app now uses TailwindCSS, these more complex rules for the
+  image overlay and bounding boxes have been kept for convenience.
+  They can be refactored into Tailwind classes over time.
+*/
 
-@import "tailwindcss/utilities";
+.image-wrapper {
+  position: relative;
+  /* This is crucial for positioning the overlay */
+  display: inline-block;
+  /* Shrink-wrap the container to the image size */
+  overflow: hidden;
+}
 
-body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+.image-wrapper img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* The overlay that contains all boxes and is draggable */
+#bbox-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  /* Indicates this element is draggable */
+  transform-origin: center center;
+}
+
+#bbox-overlay.dragging {
+  cursor: grabbing;
+  /* Change cursor while dragging */
+}
+
+/* Individual bounding box style */
+.bounding-box {
+  position: absolute;
+  box-sizing: border-box;
+  /* Ensures border width is included in element's size */
+  border: 2px solid red;
+  background-color: rgb(255 0 0 / 10%);
+  /* Slight red tint inside */
+}
+
+/* Label for each box */
+.box-label {
+  position: absolute;
+  top: -20px;
+  /* Position above the box */
+  left: 0;
+  background-color: red;
+  color: white;
+  font-size: 14px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: bold;
+  user-select: none;
+}
+
+/* Make the body and html take up the full height of the browser window */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f9;
+}
+
+#autosave-status.status-progress {
+  color: #007bff;
+  font-style: italic;
+}
+#autosave-status.status-validated {
+  color: #28a745;
+}
+#autosave-status.status-error {
+  color: #dc3545;
+  font-weight: bold;
 }

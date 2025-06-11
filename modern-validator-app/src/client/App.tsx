@@ -1,13 +1,15 @@
 import React from "react";
-import Main from "./pages/Main";
-import { ContextWrapper } from "./Context";
+import { Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
+import ValidatePage from "./pages/ValidatePage";
 
-export const App = () => {
+function App() {
   return (
-    <ContextWrapper>
-      <Main />
-    </ContextWrapper>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/validate/:json_filename" element={<ValidatePage />} />
+    </Routes>
   );
-};
+}
 
 export default App;

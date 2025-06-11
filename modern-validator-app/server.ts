@@ -1,108 +1,89 @@
-import type { Request, Response, NextFunction } from "express";
-import fs from "fs/promises";
-import path, { dirname } from "path";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import compression from "compression";
-import serveStatic from "serve-static";
+import cors from "cors";
 import { createServer as createViteServer } from "vite";
-import { fileURLToPath } from "url";
-const isTest = process.env.NODE_ENV === "test" || !!process.env.VITE_TEST_BUILD;
+import apiRouter from "./src/server/api.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const resolve = (p: string) => path.resolve(__dirname, p);
+const isTest = process.env.NODE_ENV === "test";
+const isProd = process.env.NODE_ENV === "production";
 
-const getStyleSheets = async () => {
-  try {
-    const assetpath = resolve("public");
-    const files = await fs.readdir(assetpath);
-    const cssAssets = files.filter(l => l.endsWith(".css"));
-    const allContent = [];
-    for (const asset of cssAssets) {
-      const content = await fs.readFile(path.join(assetpath, asset), "utf-8");
-      allContent.push(`<style type="text/css">${content}</style>`);
-    }
-    return allContent.join("\n");
-  } catch {
-    return "";
-  }
-};
-
-async function createServer(isProd = process.env.NODE_ENV === "production") {
+async function createServer() {
   const app = express();
-  // Create Vite server in middleware mode and configure the app type as
-  // 'custom', disabling Vite's own HTML serving logic so parent server
-  // can take control
+
   const vite = await createViteServer({
     server: { middlewareMode: true },
     appType: "custom",
     logLevel: isTest ? "error" : "info",
-    root: isProd ? "dist" : "",
-    optimizeDeps: { include: [] },
   });
 
-  // use vite's connect instance as middleware
-  // if you use your own express router (express.Router()), you should use router.use
   app.use(vite.middlewares);
-  const assetsDir = resolve("public");
-  const requestHandler = express.static(assetsDir);
-  app.use(requestHandler);
-  app.use("/public", requestHandler);
+
+  app.use(cors());
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // API routes
+  app.use("/api", apiRouter);
 
   if (isProd) {
     app.use(compression());
-    app.use(
-      serveStatic(resolve("client"), {
-        index: false,
-      }),
-    );
+    app.use(express.static(path.resolve(__dirname, "dist/client"), { index: false }));
   }
-  const stylesheets = getStyleSheets();
 
-  // 1. Read index.html
-  const baseTemplate = await fs.readFile(isProd ? resolve("client/index.html") : resolve("index.html"), "utf-8");
-  const productionBuildPath = path.join(__dirname, "./server/entry-server.js");
-  const devBuildPath = path.join(__dirname, "./src/client/entry-server.tsx");
-  const buildModule = isProd ? productionBuildPath : devBuildPath;
-  const { render } = await vite.ssrLoadModule(buildModule);
+  // Serve static images from public directory
+  app.use("/public", express.static(path.resolve(__dirname, "public")));
 
-  app.use("*", async (req: Request, res: Response, next: NextFunction) => {
+  app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
     try {
-      // 2. Apply Vite HTML transforms. This injects the Vite HMR client, and
-      //    also applies HTML transforms from Vite plugins, e.g. global preambles
-      //    from @vitejs/plugin-react
-      const template = await vite.transformIndexHtml(url, baseTemplate);
-      // 3. Load the server entry. vite.ssrLoadModule automatically transforms
-      //    your ESM source code to be usable in Node.js! There is no bundling
-      //    required, and provides efficient invalidation similar to HMR.
+      const template = await fs.readFile(
+        isProd ? path.resolve(__dirname, "dist/client/index.html") : path.resolve(__dirname, "index.html"),
+        "utf-8"
+      );
 
-      // 4. render the app HTML. This assumes entry-server.js's exported `render`
-      //    function calls appropriate framework SSR APIs,
-      //    e.g. ReactDOMServer.renderToString()
+      const transformedTemplate = await vite.transformIndexHtml(url, template);
+
+      const { render } = await vite.ssrLoadModule(
+        isProd
+          ? "/dist/server/entry-server.js"
+          : "/src/client/entry-server.tsx"
+      );
+
       const appHtml = await render(url);
-      const cssAssets = await stylesheets;
 
-      // 5. Inject the app-rendered HTML into the template.
-      const html = template.replace(`<!--app-html-->`, appHtml).replace(`<!--head-->`, cssAssets);
+      const html = transformedTemplate.replace(`<!--app-html-->`, appHtml);
 
-      // 6. Send the rendered HTML back.
       res.status(200).set({ "Content-Type": "text/html" }).end(html);
-    } catch (e: any) {
-      !isProd && vite.ssrFixStacktrace(e);
-      console.log(e.stack);
-      // If an error is caught, let Vite fix the stack trace so it maps back to
-      // your actual source code.
-      vite.ssrFixStacktrace(e);
-      next(e);
+    } catch (e) {
+      if (e instanceof Error) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      } else {
+        next(new Error("Unknown error during SSR"));
+      }
     }
   });
+
   const port = process.env.PORT || 7456;
   app.listen(Number(port), "0.0.0.0", () => {
-    console.log(`App is listening on http://localhost:${port}`);
+    console.log(`✅ Server is listening on http://localhost:${port}`);
+    console.log(`Proxy for Vite dev server is set up at http://localhost:3000`);
   });
 }
 
-createServer();
+// Create data directories on startup if they don't exist
+const dataDirs = ['data_source', 'data_in_progress', 'data_validated'];
+Promise.all(dataDirs.map(dir => fs.mkdir(dir, { recursive: true })))
+  .then(() => {
+    createServer();
+  })
+  .catch(err => {
+    console.error("Failed to create data directories:", err);
+    process.exit(1);
+  });
