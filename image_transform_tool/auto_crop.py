@@ -20,7 +20,7 @@ def order_points(pts):
 def main():
     # --- 1. Argument Parser ---
     ap = argparse.ArgumentParser(
-        description="Auto-crop by creating a bounding box around filtered content."
+        description="Auto-crop by creating a bounding box around aspect-ratio-filtered content."
     )
     ap.add_argument("-i", "--image", required=True, help="Path to the input image")
     ap.add_argument(
@@ -63,32 +63,35 @@ def main():
     closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
     cv2.imwrite(output_path.replace(".jpg", "_closed.jpg"), closed)
 
-    # --- 4. Find all content blobs, filter them, and combine ---
-    print("[INFO] Finding and filtering content blobs to create a 'point cloud'...")
+    # --- 4. Find all content blobs and filter them ---
+    print(
+        "[INFO] Finding and filtering content blobs using Aspect Ratio to create a 'point cloud'..."
+    )
     contours, _ = cv2.findContours(
         closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
 
-    # *** NEW: Add dimension thresholds for filtering ***
+    # *** NEW: Aspect Ratio Filtering Logic ***
     contour_area_threshold = 100
-    dimension_threshold = 40  # The minimum width or height in pixels
+    aspect_ratio_threshold = 5.0  # Keep contours that are no more than 5x wider than tall, or 5x taller than wide.
     all_contour_points = []
 
     for c in contours:
         # Get the non-rotated bounding box
         x, y, w, h = cv2.boundingRect(c)
 
-        # Apply all three filters
-        if (
-            cv2.contourArea(c) > contour_area_threshold
-            and w > dimension_threshold
-            and h > dimension_threshold
-        ):
-            all_contour_points.append(c)
-        else:
-            # Optional: Log which contours are being filtered out for debugging
-            print(f"[DEBUG] Filtering out contour with area={cv2.contourArea(c):.0f}, w={w}, h={h}")
-            pass
+        # Calculate aspect ratio, handle division by zero
+        aspect_ratio = float(w) / h if h > 0 else 0
+
+        # Apply area and aspect ratio filters
+        if cv2.contourArea(c) > contour_area_threshold:
+            # Check if aspect ratio is within a reasonable range
+            if (aspect_ratio > 1 / aspect_ratio_threshold) and (
+                aspect_ratio < aspect_ratio_threshold
+            ):
+                all_contour_points.append(c)
+            else:
+                print(f"[DEBUG] Filtering out contour with aspect ratio: {aspect_ratio:.2f}")
 
     if not all_contour_points:
         print(
@@ -105,7 +108,7 @@ def main():
     )
     rect = cv2.minAreaRect(point_cloud)
     box = cv2.boxPoints(rect)
-    box = np.int32(box)  # Use np.int32 for modern numpy compatibility
+    box = np.int32(box)
 
     if box.size == 0:
         print(
