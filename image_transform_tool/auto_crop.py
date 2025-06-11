@@ -2,11 +2,13 @@ import cv2
 import numpy as np
 import argparse
 import logging
+from typing import Tuple
+from numpy.typing import NDArray
 
 # --- HELPER FUNCTIONS ---
 
 
-def order_points(pts):
+def order_points(pts: NDArray[np.float32]) -> NDArray[np.float32]:
     """
     Takes a set of 4 points and orders them: top-left, top-right, bottom-right, bottom-left.
     """
@@ -23,9 +25,12 @@ def order_points(pts):
 # --- PROCESSING PIPELINE FUNCTIONS ---
 
 
-def load_and_preprocess_image(image_path):
+def load_and_preprocess_image(
+    image_path: str,
+) -> Tuple[NDArray[np.uint8], NDArray[np.uint8]]:
     """
     Step 1: Loads an image, converts it to grayscale, blurs it, and finds edges.
+    Returns the original color image and the 8-bit single-channel edge-detected image.
     """
     logging.info("Step 1: Loading and pre-processing image...")
     image = cv2.imread(image_path)
@@ -39,28 +44,30 @@ def load_and_preprocess_image(image_path):
 
 
 def create_content_mask(
-    edged_image, kernel_w, kernel_h, erosion_k, output_path_prefix, debug
-):
+    edged_image: NDArray[np.uint8],
+    kernel_w: int,
+    kernel_h: int,
+    erosion_k: int,
+    output_path_prefix: str,
+    debug: bool,
+) -> NDArray[np.uint8]:
     """
     Step 2: Takes an edge map, applies morphological closing to form blobs,
     then uses erosion to filter out thin lines, creating a clean content mask.
     Returns the final cleaned mask.
     """
-    # Create a rectangular kernel that is wider than it is tall to connect words horizontally.
     logging.info(
         f"Step 2a: Applying morphological closing with kernel ({kernel_w}, {kernel_h})..."
     )
     closing_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_w, kernel_h))
     closed = cv2.morphologyEx(edged_image, cv2.MORPH_CLOSE, closing_kernel)
 
-    # Use a square kernel to test for thickness and remove thin lines.
     logging.info(
         f"Step 2b: Filtering thin lines with erosion kernel {erosion_k}x{erosion_k}..."
     )
     erosion_kernel = np.ones((erosion_k, erosion_k), np.uint8)
     eroded = cv2.erode(closed, erosion_kernel, iterations=1)
 
-    # Dilate back to restore the original size of the thick, surviving blobs.
     reconstructed = cv2.dilate(eroded, erosion_kernel, iterations=1)
 
     if debug:
@@ -71,9 +78,11 @@ def create_content_mask(
     return reconstructed
 
 
-def find_document_boundary(cleaned_mask):
+def find_document_boundary(
+    cleaned_mask: NDArray[np.uint8],
+) -> Tuple[NDArray[np.float32], NDArray[np.float32]]:
     """
-    Step 3: Finds all content blobs and returns the corners of the bounding box.
+    Step 3: Finds all content blobs and returns the ordered corner points and the raw box points.
     """
     logging.info("Step 3: Finding the boundary of the document content...")
     contours, _ = cv2.findContours(
@@ -92,7 +101,9 @@ def find_document_boundary(cleaned_mask):
     return ordered_pts, box
 
 
-def warp_and_crop_image(original_image, ordered_pts, margin):
+def warp_and_crop_image(
+    original_image: NDArray[np.uint8], ordered_pts: NDArray[np.float32], margin: int
+) -> NDArray[np.uint8]:
     """
     Step 4: Performs a perspective warp to straighten the document and adds a margin.
     """
@@ -131,13 +142,15 @@ def warp_and_crop_image(original_image, ordered_pts, margin):
 
 
 def save_debug_visualization(
-    original_image, detected_box, ordered_pts, output_path_prefix
-):
+    original_image: NDArray[np.uint8],
+    detected_box: NDArray[np.float32],
+    ordered_pts: NDArray[np.float32],
+    output_path_prefix: str,
+) -> None:
     """
     Saves a visualization of the detected boundary on the original image.
     """
     logging.info("Saving detection visualization image...")
-    # Make a copy to avoid drawing on the original image object
     viz_image = original_image.copy()
     cv2.drawContours(viz_image, [np.int32(detected_box)], 0, (0, 255, 0), 5)
     for point in ordered_pts:
@@ -150,7 +163,15 @@ def save_debug_visualization(
 # --- MAIN COORDINATOR ---
 
 
-def main(image_path, output_path, margin, kernel_w, kernel_h, erosion_k, debug):
+def main(
+    image_path: str,
+    output_path: str,
+    margin: int,
+    kernel_w: int,
+    kernel_h: int,
+    erosion_k: int,
+    debug: bool,
+) -> None:
     """
     Main pipeline coordinator that calls the processing functions in sequence.
     """
@@ -225,7 +246,6 @@ if __name__ == "__main__":
 
     args = ap.parse_args()
 
-    # Configure the logger based on the verbose flag
     log_level = logging.INFO if args.verbose else logging.ERROR
     logging.basicConfig(level=log_level, format="[%(levelname)s] %(message)s")
 
