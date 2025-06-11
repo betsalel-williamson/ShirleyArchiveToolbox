@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Annotation, TextState } from '../../types/types';
+import type { Annotation, TextState } from '../../../types/types';
 
 interface FormPaneProps {
   annotations: Annotation[];
@@ -8,9 +8,11 @@ interface FormPaneProps {
   autosaveStatus: { message: string, type: string };
   onCommit: () => void;
   onBack: () => void;
+  onWordSelect: (wordId: string) => void;
+  formContainerRef: React.RefObject<HTMLDivElement>;
 }
 
-const FormPane: React.FC<FormPaneProps> = ({ annotations, textState, onTextChange, autosaveStatus, onCommit, onBack }) => {
+const FormPane: React.FC<FormPaneProps> = ({ annotations, textState, onTextChange, autosaveStatus, onCommit, onBack, onWordSelect, formContainerRef }) => {
   return (
     <>
       <div className="p-6 border-b border-gray-200">
@@ -19,7 +21,7 @@ const FormPane: React.FC<FormPaneProps> = ({ annotations, textState, onTextChang
           {autosaveStatus.message}
         </span>
       </div>
-      <div className="flex-grow overflow-y-auto p-6">
+      <div ref={formContainerRef} className="flex-grow overflow-y-auto p-6">
         <form onSubmit={(e) => { e.preventDefault(); onCommit(); }} className="space-y-4">
           {annotations.map((word) => (
             <div key={word.id} className="form-group">
@@ -32,6 +34,7 @@ const FormPane: React.FC<FormPaneProps> = ({ annotations, textState, onTextChang
                 name={`text_${word.id}`}
                 value={textState[word.id] || ''}
                 onChange={(e) => onTextChange(word.id, e.target.value)}
+                onFocus={() => onWordSelect(word.id)}
                 className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
               />
             </div>

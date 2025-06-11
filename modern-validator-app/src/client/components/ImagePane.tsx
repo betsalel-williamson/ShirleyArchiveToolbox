@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import type { Annotation, TransformationState } from '../../types/types';
+import type { Annotation, TransformationState } from '../../../types/types';
 import BoundingBox from './BoundingBox';
 
 interface ImagePaneProps {
@@ -7,9 +7,11 @@ interface ImagePaneProps {
   annotations: Annotation[];
   transformation: TransformationState;
   onTransformationChange: (newTransformation: TransformationState) => void;
+  onWordSelect: (wordId: string) => void;
+  imageWrapperRef: React.RefObject<HTMLDivElement>;
 }
 
-const ImagePane: React.FC<ImagePaneProps> = ({ imageSrc, annotations, transformation, onTransformationChange }) => {
+const ImagePane: React.FC<ImagePaneProps> = ({ imageSrc, annotations, transformation, onTransformationChange, onWordSelect, imageWrapperRef }) => {
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const initialTransform = useRef({ offsetX: 0, offsetY: 0 });
@@ -44,7 +46,7 @@ const ImagePane: React.FC<ImagePaneProps> = ({ imageSrc, annotations, transforma
 
   return (
     <div className="flex justify-center items-start">
-        <div className="image-wrapper" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+        <div ref={imageWrapperRef} className="image-wrapper" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
             <img src={imageSrc} alt="Document for validation" />
             <div
                 id="bbox-overlay"
@@ -55,7 +57,7 @@ const ImagePane: React.FC<ImagePaneProps> = ({ imageSrc, annotations, transforma
                 onMouseDown={handleMouseDown}
             >
                 {annotations.map((word) => (
-                    <BoundingBox key={word.id} word={word} />
+                    <BoundingBox key={word.id} word={word} onClick={onWordSelect} />
                 ))}
             </div>
         </div>

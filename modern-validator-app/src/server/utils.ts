@@ -1,7 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from 'url';
-import { ParsedQs } from "qs";
 import { Request } from "express";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,9 +13,18 @@ export const VALIDATED_DATA_DIR = path.join(ROOT_DIR, 'data_validated');
 
 
 export const getJsonFiles = async (): Promise<string[]> => {
-    const sourceFiles = await fs.readdir(SOURCE_DATA_DIR);
-    const inProgressFiles = await fs.readdir(IN_PROGRESS_DATA_DIR);
-    const validatedFiles = await fs.readdir(VALIDATED_DATA_DIR);
+    // Reading directories can throw if they don't exist, so we handle that.
+    const readDirSafe = async (dir: string) => {
+        try {
+            return await fs.readdir(dir);
+        } catch (error: any) {
+            if (error.code === 'ENOENT') return []; // Directory doesn't exist
+            throw error; // Other errors
+        }
+    }
+    const sourceFiles = await readDirSafe(SOURCE_DATA_DIR);
+    const inProgressFiles = await readDirSafe(IN_PROGRESS_DATA_DIR);
+    const validatedFiles = await readDirSafe(VALIDATED_DATA_DIR);
 
     const allFiles = new Set([
         ...sourceFiles,
@@ -36,20 +44,15 @@ export const getFileStatus = async (jsonFilename: string): Promise<'validated' |
     try {
         await fs.access(validatedPath);
         return "validated";
-    } catch (e) {
-        // Not validated, check in progress
-    }
+    } catch (e) { /* Not validated */ }
 
     try {
         await fs.access(inProgressPath);
         return "in_progress";
-    } catch (e) {
-        // Not in progress, must be source
-    }
+    } catch (e) { /* Not in progress */ }
 
     return "source";
 };
-
 
 const fileExists = async (filePath: string): Promise<boolean> => {
     try {
@@ -82,19 +85,24 @@ export const loadData = async (jsonFilename: string): Promise<any | null> => {
     return JSON.parse(fileContent);
 };
 
-// Define a type for Form Data
-type FormData = { [key: string]: string | string[] | ParsedQs | ParsedQs[] | undefined }
+/**
+ * Applies transformations from a delta object to a base data object.
+ * @param baseData The original, unmodified data object loaded from disk.
+ * @param delta The request body containing only the changes.
+ * @returns A new data object with the transformations applied.
+ */
+export const applyTransformationsToData = (baseData: any, delta: Request['body']) => {
+    // Create a deep copy to avoid mutating the original object
+    const data = JSON.parse(JSON.stringify(baseData));
 
-export const applyTransformationsToData = (form: Request['body']) => {
-    const data = JSON.parse(form.json_data as string);
-    const offsetX = parseFloat(form.offsetX as string || "0");
-    const offsetY = parseFloat(form.offsetY as string || "0");
-    const rotationDeg = parseFloat(form.rotation as string || "0");
-    const scale = parseFloat(form.scale as string || "1.0");
+    const offsetX = parseFloat(delta.offsetX as string || "0");
+    const offsetY = parseFloat(delta.offsetY as string || "0");
+    const rotationDeg = parseFloat(delta.rotation as string || "0");
+    const scale = parseFloat(delta.scale as string || "1.0");
 
     const isTransformed = offsetX !== 0 || offsetY !== 0 || rotationDeg !== 0 || scale !== 1.0;
 
-    let cosRad: number, sinRad: number;
+    let cosRad = 1, sinRad = 0;
     const imgDims = data.image_dimensions || {};
     const cx = (imgDims.width || 0) / 2;
     const cy = (imgDims.height || 0) / 2;
@@ -108,14 +116,17 @@ export const applyTransformationsToData = (form: Request['body']) => {
     const allWords: { [id: string]: any } = {};
     for (const line of data.lines || []) {
         for (const word of line.words || []) {
-            allWords[word.id] = word;
+            // Ensure ID exists for mapping
+            if (word.id) {
+                allWords[word.id] = word;
+            }
         }
     }
 
-    for (const [key, value] of Object.entries(form)) {
+    for (const [key, value] of Object.entries(delta)) {
         if (key.startsWith("text_")) {
             const wordId = key.replace("text_", "");
-            if (wordId in allWords) {
+            if (allWords[wordId]) {
                 allWords[wordId].text = value;
             }
         }

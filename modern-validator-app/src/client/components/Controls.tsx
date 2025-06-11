@@ -8,9 +8,10 @@ interface ControlsProps {
   canUndo: boolean;
   canRedo: boolean;
   onRevert: () => void;
+  onResetView: () => void;
 }
 
-const Controls: React.FC<ControlsProps> = ({ state, setState, onUndo, onRedo, canUndo, canRedo, onRevert }) => {
+const Controls: React.FC<ControlsProps> = ({ state, setState, onUndo, onRedo, canUndo, canRedo, onRevert, onResetView }) => {
 
   const handleTransformChange = (key: string, value: number) => {
     setState({ ...state, trans: { ...state.trans, [key]: value } });
@@ -42,7 +43,7 @@ const Controls: React.FC<ControlsProps> = ({ state, setState, onUndo, onRedo, ca
           <input type="number" value={scale.toFixed(2)} step="0.01"
             onChange={(e) => handleTransformChange('scale', parseFloat(e.target.value))}
             className="w-24 p-1 border rounded-md text-sm" />
-          <span>x</span>
+          <span className="w-12 text-right">{scale.toFixed(2)}x</span>
         </div>
 
         {/* Translation */}
@@ -59,10 +60,11 @@ const Controls: React.FC<ControlsProps> = ({ state, setState, onUndo, onRedo, ca
       </div>
 
       {/* Action Buttons */}
-      <div className="pt-4 border-t border-gray-300 flex items-center gap-2">
+      <div className="pt-4 border-t border-gray-300 flex items-center gap-2 flex-wrap">
         <button onClick={onUndo} disabled={!canUndo} className="px-4 py-2 text-sm font-semibold text-white bg-gray-500 rounded-md hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed">Undo</button>
         <button onClick={onRedo} disabled={!canRedo} className="px-4 py-2 text-sm font-semibold text-white bg-gray-500 rounded-md hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed">Redo</button>
-        <button onClick={onRevert} className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-md hover:bg-red-600">Revert to Original</button>
+        <button onClick={onRevert} className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-md hover:bg-red-600">Revert Data</button>
+        <button onClick={onResetView} className="px-4 py-2 text-sm font-semibold text-white bg-blue-500 rounded-md hover:bg-blue-600">Reset View</button>
       </div>
     </div>
   );
