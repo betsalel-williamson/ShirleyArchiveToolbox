@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import argparse
 import logging
+import sys
 from typing import Tuple
 from numpy.typing import NDArray
 
@@ -110,6 +111,10 @@ def warp_and_crop_image(
     logging.info("Step 4: Applying perspective warp and adding margin...")
     (tl, tr, br, bl) = ordered_pts
 
+    logging.info(
+        f"Using ordered points for crop (TL, TR, BR, BL): {ordered_pts.tolist()}"
+    )
+
     widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
     widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
     maxWidth = max(int(widthA), int(widthB))
@@ -171,9 +176,10 @@ def main(
     kernel_h: int,
     erosion_k: int,
     debug: bool,
-) -> None:
+) -> int:
     """
-    Main pipeline coordinator that calls the processing functions in sequence.
+    Main pipeline coordinator that calls processing functions and returns an exit code.
+    Returns 0 on success, and a non-zero integer on failure.
     """
     try:
         original_image, edged_image = load_and_preprocess_image(image_path)
@@ -194,11 +200,17 @@ def main(
         logging.info(
             f"Successfully cropped and straightened image and saved to {output_path}"
         )
+        return 0  # Success
 
-    except (FileNotFoundError, ValueError) as e:
-        logging.error(f"A critical error occurred: {e}")
+    except FileNotFoundError as e:
+        logging.error(f"Input file not found: {e}")
+        return 2  # Specific error code for file not found
+    except ValueError as e:
+        logging.error(f"Processing error: {e}")
+        return 3  # Specific error code for processing failure (e.g., no contours)
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}", exc_info=True)
+        return 1  # General error code for all other exceptions
 
 
 # --- ARGUMENT PARSING AND EXECUTION ---
@@ -249,7 +261,8 @@ if __name__ == "__main__":
     log_level = logging.INFO if args.verbose else logging.ERROR
     logging.basicConfig(level=log_level, format="[%(levelname)s] %(message)s")
 
-    main(
+    # Capture the return code from main and exit with it
+    exit_code = main(
         image_path=args.image,
         output_path=args.output,
         margin=args.margin,
@@ -258,3 +271,5 @@ if __name__ == "__main__":
         erosion_k=args.erosion_k,
         debug=args.debug,
     )
+
+    sys.exit(exit_code)
