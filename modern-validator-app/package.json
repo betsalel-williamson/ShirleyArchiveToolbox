@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx dev-server.ts",
+    "stop": "lsof -t -i:5173 | xargs kill -9 || true",
     "build": "pnpm build:client && pnpm build:server",
     "build:client": "vite build --outDir dist/client",
     "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",
@@ -35,5 +36,11 @@
     "tsx": "^4.9.4",
     "typescript": "^5.4.5",
     "vite": "^5.2.11"
+  },
+  "tsx": {
+    "watch": [
+      "./dev-server.ts",
+      "./src/**/*"
+    ]
   }
 }

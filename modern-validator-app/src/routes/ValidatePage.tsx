@@ -1,8 +1,9 @@
-// client/src/routes/ValidatePage.tsx
-import React, { useState, useEffect, useRef, useReducer } from 'react';
+import React, { Suspense, useState, useEffect, useRef, useReducer } from 'react';
 import { useFetcher, Link, useNavigate, useParams } from 'react-router-dom';
 import { BoundingBox } from '../components/BoundingBox';
 import { Controls } from '../components/Controls';
+import { fetchData } from '../data-wrapper';
+import { getDocumentById } from '../data';
 
 // --- Types (remain the same) ---
 interface Word { id: string; display_id: number; text: string; bounding_box: { x_min: number; y_min: number; x_max: number; y_max: number; }; }
@@ -12,40 +13,14 @@ type TransformState = { offsetX: number; offsetY: number; rotation: number; scal
 type TextState = { [key:string]: string };
 type HistoryState = { transforms: TransformState; texts: TextState; };
 
-// // The action function is for form submissions and still works perfectly.
-//         method: 'POST', body: formData,
-//     });
-//     return res.json();
-// }
-
-// --- Main Component ---
-export default function ValidatePage() {
-    const { id } = useParams<{ id: string }>();
+// --- Main Validator Component (receives data as prop) ---
+function Validator({ documentData }: { documentData: DocumentData }) {
     const fetcher = useFetcher();
     const navigate = useNavigate();
-
-    // --- NEW: State for holding data, loading, and errors ---
-    const [documentData, setDocumentData] = useState<DocumentData | null>(null);
-    const [error, setError] = useState<string | null>(null);
-
-    // --- NEW: useEffect to fetch data on mount or when ID changes ---
-    useEffect(() => {
-        if (!id) return;
-        setDocumentData(null); // Reset on ID change
-        setError(null);
-
-        fetch(`/api/documents/${id}`)
-            .then(res => {
-                if (!res.ok) throw new Error(`Failed to fetch document ${id}`);
-                return res.json();
-            })
-            .then(data => setDocumentData(data))
-            .catch(err => setError(err.message));
-    }, [id]);
+    const { id } = useParams<{ id: string }>();
 
     const getInitialAnnotations = () => documentData?.currentData?.lines.flatMap(line => line.words) || [];
 
-    // State management needs to be initialized safely
     const [texts, setTexts] = useState<TextState>({});
     const [transforms, setTransforms] = useState<TransformState>({ offsetX: 0, offsetY: 0, rotation: 0, scale: 1.0 });
     const [history, dispatchHistory] = useReducer(historyReducer, { past: [], present: { transforms, texts }, future: [] });
@@ -54,9 +29,8 @@ export default function ValidatePage() {
     const isDragging = useRef(false);
     const startPos = useRef({ x: 0, y: 0 });
     const overlayRef = useRef<HTMLDivElement>(null);
-    const initialDataRef = useRef(documentData?.currentData);
+    const initialDataRef = useRef(documentData.currentData);
 
-    // Effect to reset state when new data arrives
     useEffect(() => {
         if (!documentData || !documentData.currentData) return;
         initialDataRef.current = documentData.currentData;
@@ -69,44 +43,25 @@ export default function ValidatePage() {
         setStatus({ msg: '', type: '' });
     }, [documentData]);
 
-    // ... (The rest of the effects and handlers are largely the same) ...
-    // Debounced Autosave Effect
+    // ... (rest of the effects and handlers are largely the same)
+    // ... (omitting for brevity, they are the same as before)
+    // --- Handlers from previous version ---
+    const autoSaveState = async (baseData?: CurrentData) => {
+        setStatus({ msg: 'Saving...', type: 'status-progress' });
+        try {
+            const res = await fetch(`/api/documents/${id}/autosave`, { method: 'POST', body: createFormData(baseData) });
+            if (res.ok) setStatus({ msg: 'Draft Saved ✓', type: 'status-validated' });
+            else throw new Error('Save failed');
+        } catch (error) { setStatus({ msg: 'Save Failed!', type: 'status-error' }); }
+    };
+
     useEffect(() => {
-        if (!documentData) return; // Don't save if no data
+        if (!documentData) return;
         const handler = setTimeout(() => {
             if (history.past.length > 0) autoSaveState();
         }, 1500);
         return () => clearTimeout(handler);
     }, [history.present, documentData]);
-
-    // Commit navigation effect
-    useEffect(() => {
-        if (fetcher.state === 'idle' && fetcher.data) {
-            const { nextDocumentId } = fetcher.data as any;
-            if (nextDocumentId) navigate(`/validate/${nextDocumentId}`);
-            else navigate('/');
-        }
-    }, [fetcher.data, fetcher.state, navigate]);
-
-    // Dragging effect
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!isDragging.current) return;
-            setTransforms(prev => ({ ...prev, offsetX: e.clientX - startPos.current.x, offsetY: e.clientY - startPos.current.y }));
-        };
-        const handleMouseUp = () => {
-            if (!isDragging.current) return;
-            isDragging.current = false;
-            overlayRef.current?.classList.remove('dragging');
-            dispatchHistory({ type: 'SET', payload: { transforms, texts } });
-        };
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [transforms, texts]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -114,12 +69,36 @@ export default function ValidatePage() {
         startPos.current = { x: e.clientX - transforms.offsetX, y: e.clientY - transforms.offsetY };
         overlayRef.current?.classList.add('dragging');
     };
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!isDragging.current) return;
+        setTransforms(prev => ({ ...prev, offsetX: e.clientX - startPos.current.x, offsetY: e.clientY - startPos.current.y }));
+    };
+    const handleMouseUp = () => {
+        if (!isDragging.current) return;
+        isDragging.current = false;
+        overlayRef.current?.classList.remove('dragging');
+        dispatchHistory({ type: 'SET', payload: { transforms, texts } });
+    };
+    useEffect(() => {
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [transforms, texts]);
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => setTexts(prev => ({ ...prev, [e.target.name]: e.target.value }));
     const handleTextBlur = () => dispatchHistory({ type: 'SET', payload: { transforms, texts } });
     const handleTransformChange = (newT: Partial<TransformState>) => setTransforms({ ...transforms, ...newT });
     const handleTransformCommit = () => dispatchHistory({ type: 'SET', payload: { transforms, texts } });
-
-    const handleRevert = async () => {
+    const createFormData = (baseData?: CurrentData) => {
+        const formData = new FormData();
+        formData.append('json_data', JSON.stringify(baseData || initialDataRef.current));
+        Object.entries(history.present.transforms).forEach(([k, v]) => formData.append(k, String(v)));
+        Object.entries(history.present.texts).forEach(([k, v]) => formData.append(k, v));
+        return formData;
+    };
+     const handleRevert = async () => {
         if (!confirm('Revert to original? This will overwrite your current draft.')) return;
         setStatus({ msg: 'Reverting...', type: 'status-progress' });
         try {
@@ -135,26 +114,18 @@ export default function ValidatePage() {
             autoSaveState(data);
         } catch (error) { setStatus({ msg: 'Revert Failed!', type: 'status-error' }); }
     };
+     useEffect(() => {
+        if (fetcher.state === 'idle' && fetcher.data) {
+            const { nextDocumentId } = fetcher.data as any;
+            if (nextDocumentId) navigate(`/validate/${nextDocumentId}`);
+            else navigate('/');
+        }
+    }, [fetcher.data, fetcher.state, navigate]);
 
-    const createFormData = (baseData?: CurrentData) => {
-        const formData = new FormData();
-        formData.append('json_data', JSON.stringify(baseData || initialDataRef.current));
-        Object.entries(history.present.transforms).forEach(([k, v]) => formData.append(k, String(v)));
-        Object.entries(history.present.texts).forEach(([k, v]) => formData.append(k, v));
-        return formData;
-    };
-
-    const autoSaveState = async (baseData?: CurrentData) => {
-        setStatus({ msg: 'Saving...', type: 'status-progress' });
-        try {
-            const res = await fetch(`/api/documents/${id}/autosave`, { method: 'POST', body: createFormData(baseData) });
-            if (res.ok) setStatus({ msg: 'Draft Saved ✓', type: 'status-validated' });
-            else throw new Error('Save failed');
-        } catch (error) { setStatus({ msg: 'Save Failed!', type: 'status-error' }); }
-    };
-
-    if (error) return <div className="container"><h1>Error</h1><p>{error}</p></div>;
-    if (!documentData) return <div className="container"><h1>Loading document...</h1></div>;
+    // --- RENDER LOGIC ---
+    if (documentData.status === 404) {
+        return <div className="container"><h2>{documentData.error}</h2><Link to="/">Back to List</Link></div>;
+    }
 
     const annotations = getInitialAnnotations();
 
@@ -175,7 +146,7 @@ export default function ValidatePage() {
             </div>
             <div className="form-pane">
                 <h3>Word Transcriptions <span id="autosave-status" className={status.type}>{status.msg}</span></h3>
-                <fetcher.Form method="post" onSubmit={e => { fetcher.submit(createFormData(), { method: 'post' }); e.preventDefault(); }}>
+                <fetcher.Form method="post" action={`/validate/${id}?index`} onSubmit={e => { fetcher.submit(createFormData(), { method: 'post', action: `/validate/${id}?index` }); e.preventDefault(); }}>
                     <div className='form-scroll-area'>
                         {annotations.map(word => (
                             <div className="form-group" key={word.id}>
@@ -197,6 +168,18 @@ export default function ValidatePage() {
     );
 }
 
+// --- Page Level Component with Suspense ---
+export default function ValidatePage() {
+    const { id } = useParams<{ id: string }>();
+    if (!id) return <div>Invalid document ID</div>;
+
+    // This is the data fetching boundary
+    const documentData = fetchData(`document_${id}`, () => getDocumentById(id)).read();
+
+    return <Validator documentData={documentData} />;
+}
+
+// --- Reducer (remains the same) ---
 type Action = { type: 'UNDO' } | { type: 'REDO' } | { type: 'SET', payload: HistoryState } | { type: 'RESET', payload: HistoryState };
 interface State { past: HistoryState[]; present: HistoryState; future: HistoryState[]; }
 function historyReducer(state: State, action: Action): State {

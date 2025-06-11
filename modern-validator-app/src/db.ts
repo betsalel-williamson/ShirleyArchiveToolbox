@@ -3,7 +3,7 @@ import { Kysely, SqliteDialect } from 'kysely';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import type { Database as DB } from './types.db.js'; // <-- CORRECTED PATH
+import type { Database as DB } from './types.db'; // <-- CORRECTED PATH
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Path to DB is now three levels up from server/src/

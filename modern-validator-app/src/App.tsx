@@ -5,12 +5,12 @@ import { Layout } from './components/Layout'
 
 function App() {
   return (
-    <Layout>
+    <Layout><Suspense fallback={<h1>🌀 Loading page...</h1>}>
       <Routes>
         <Route path="/" element={<IndexPage />} />
         <Route path="/validate/:id" element={<ValidatePage />} />
       </Routes>
-    </Layout>
+    </Suspense></Layout>
   )
 }
 
