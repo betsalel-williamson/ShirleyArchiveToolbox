@@ -95,8 +95,3 @@ This layered approach will provide a powerful and intuitive dataset for any futu
 * `system_prompt.md`: The final, generated system prompt (for reference).
 * `data/`: Directory containing the extracted JSON files from processed diary pages.
 * `images/`: Directory containing the source scanned images of the diary.
-
-
-## Tasks and Bugs
-
-- **BUG** the gemini building of boxes does so on a transformed image, that isn't helpful because the final data is skewed from the original image, need to conside a better way to get the bounding boxes from the image through the gen ai.
