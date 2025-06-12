@@ -35,7 +35,7 @@ auto_crop.py \
 
 Converted to black and white and features shown
 
-![alt text](samples/image00008.jpg "Original Image")
+![alt text](samples/image00008_crop_closed.jpg "Original Image")
 
 ##### Reconstructed
 
