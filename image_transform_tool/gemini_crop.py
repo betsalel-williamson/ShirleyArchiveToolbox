@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 def main():
     # --- 1. Setup and Argument Parsing ---
     if "GOOGLE_API_KEY" not in os.environ:
@@ -36,7 +37,7 @@ def main():
     model = genai.GenerativeModel("models/gemini-2.5-flash-preview-05-20")
 
     # This is the prompt that tells the model exactly what to do.
-    prompt="""
+    prompt = """
 You are a high-precision, metrology-grade image analysis system. Your task is to find the precise pixel coordinates of the four outer corners of the visible white paper pages of an open diary. You MUST adhere to the following physical, geometric, and positional constraints.
 
 **Critical Constraints:**
