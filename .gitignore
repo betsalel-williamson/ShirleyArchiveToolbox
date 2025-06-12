@@ -18,3 +18,4 @@ image_transform_tool/.env
 archive/
 modern-validator-app/update.sh
 modern-validator-app/Untitled-2.sh
+.venv/
