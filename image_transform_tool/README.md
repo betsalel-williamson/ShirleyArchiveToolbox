@@ -11,6 +11,10 @@ Below is a summary of the scripts available in this directory:
 * **Purpose**: This script automatically detects and crops a document from an image. It uses a tunable, erosion-based computer vision algorithm to identify the document boundaries, performs a perspective warp to straighten the document, and then saves the cropped result.
 * **Details**: For detailed usage instructions and tunable parameters, please refer to the script's internal help (`python auto_crop.py -h`).
 
+#### Tasks
+
+Add step to auto rotate based on any line information in the photo
+
 ### 2. `crop_image.py`
 
 * **Purpose**: A simple utility script that crops an image based on explicitly provided pixel coordinates.
