@@ -77,7 +77,6 @@ def cache_to_file(
     return decorator
 
 
-# ... (Schemas are unchanged)
 FINAL_OUTPUT_SCHEMA = {
     "type": "OBJECT",
     "properties": {
@@ -174,12 +173,12 @@ GEMINI_WORD_ALTERNATIVES_SCHEMA = {
 
 
 @cache_to_file(
-    ".docai_cache.json", serializer=json.dumps, deserializer=Document.from_json
+    ".docai_cache.json", serializer=Document.to_json, deserializer=Document.from_json
 )
 async def call_doc_ai_api(
     *, config: Dict, image_path: str, force_recache: bool = False
 ) -> Optional[Document]:
-    # Running sync function in executor to not block the event loop
+    """Phase 1: Calls Document AI and caches the raw Document object."""
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
         None, functools.partial(_sync_call_doc_ai, config, image_path)
@@ -187,6 +186,7 @@ async def call_doc_ai_api(
 
 
 def _sync_call_doc_ai(config: Dict, image_path: str) -> Optional[Document]:
+    """The synchronous part of the Document AI call."""
     try:
         opts = ClientOptions(
             api_endpoint=f"{config['location']}-documentai.googleapis.com"
@@ -212,7 +212,7 @@ def _sync_call_doc_ai(config: Dict, image_path: str) -> Optional[Document]:
 
 
 def transform_doc_ai_to_custom_json(*, document: Document, image_path: str) -> Dict:
-    # ... (Unchanged)
+    """Transforms a raw Document AI object into the project's custom JSON schema."""
     logging.info("Transforming raw Document AI data into custom JSON schema.")
     with Image.open(image_path) as img:
         width, height = img.size
@@ -242,6 +242,10 @@ def transform_doc_ai_to_custom_json(*, document: Document, image_path: str) -> D
                 decorations = (
                     getattr(style_info, "text_decoration", []) if style_info else []
                 )
+                word_confidence = 0.0
+                if token.layout and hasattr(token.layout, "confidence"):
+                    word_confidence = round(token.layout.confidence, 4)
+
                 word_data = {
                     "text": "".join(
                         text[int(s.start_index) : int(s.end_index)]
@@ -253,11 +257,7 @@ def transform_doc_ai_to_custom_json(*, document: Document, image_path: str) -> D
                         "x_max": max(v.x for v in token.layout.bounding_poly.vertices),
                         "y_max": max(v.y for v in token.layout.bounding_poly.vertices),
                     },
-                    "confidence": (
-                        round(token.layout.confidence, 4)
-                        if token.layout.confidence
-                        else 0.0
-                    ),
+                    "confidence": word_confidence,
                     "writing_style": (
                         "cursive"
                         if style_info and style_info.handwritten
@@ -286,7 +286,6 @@ async def call_gemini_for_page_analysis(
     *, config: Dict, image_path: str, force_recache: bool = False
 ) -> Optional[Dict]:
     """Phase 2: Performs a single 'macro' analysis of the full page using asyncio."""
-    # ... (Unchanged)
     model = genai.GenerativeModel(config["gemini_model_name"])
     system_prompt = "Analyze the entire page. Identify all non-text graphical elements (doodles, stains) and provide a holistic analysis of the page's ink color and writing style. Respond in JSON using the provided schema."
     with open(image_path, "rb") as f:
@@ -315,68 +314,79 @@ async def _process_single_snippet_file(
     work_dirs: Dict,
     max_retries: int = 3,
 ) -> Optional[Dict]:
-    """Async worker that processes one job file from the queue, with retries."""
+    """Async worker function that processes one job file from the queue, with retries."""
     async with semaphore:
-        with open(job_file_path, "r") as f:
-            job_data = json.load(f)
-        word_id = job_data["id"]
-        original_text = job_data["original_text"]
-        snippet_path = job_data["snippet_path"]
+        try:
+            with open(job_file_path, "r") as f:
+                job_data = json.load(f)
+            word_id = job_data["id"]
+            original_text = job_data["original_text"]
+            snippet_path = job_data["snippet_path"]
 
-        with open(snippet_path, "rb") as f:
-            image_snippet_bytes = f.read()
+            with open(snippet_path, "rb") as f:
+                image_snippet_bytes = f.read()
 
-        system_prompt = f"This is an image of a single, handwritten word. A previous OCR model transcribed it as '{original_text}' with low confidence. What does this word say? Provide a list of the most likely alternatives."
-        image_part = genai_protos.Part(
-            inline_data=genai_protos.Blob(
-                mime_type="image/png", data=image_snippet_bytes
+            system_prompt = f"This is an image of a single, handwritten word. A previous OCR model transcribed it as '{original_text}' with low confidence. What does this word say? Provide a list of the most likely alternatives."
+            image_part = genai_protos.Part(
+                inline_data=genai_protos.Blob(
+                    mime_type="image/png", data=image_snippet_bytes
+                )
             )
-        )
-        generation_config = genai.GenerationConfig(
-            response_mime_type="application/json",
-            response_schema=GEMINI_WORD_ALTERNATIVES_SCHEMA,
-        )
+            generation_config = genai.GenerationConfig(
+                response_mime_type="application/json",
+                response_schema=GEMINI_WORD_ALTERNATIVES_SCHEMA,
+            )
 
-        for attempt in range(max_retries):
-            try:
-                response = await model.generate_content_async(
-                    [system_prompt, image_part], generation_config=generation_config
-                )
-                result = {
-                    "id": word_id,
-                    "alternatives": json.loads(response.text).get("alternatives", []),
-                }
+            for attempt in range(max_retries):
+                try:
+                    response = await model.generate_content_async(
+                        [system_prompt, image_part], generation_config=generation_config
+                    )
+                    result = {
+                        "id": word_id,
+                        "alternatives": json.loads(response.text).get(
+                            "alternatives", []
+                        ),
+                    }
 
-                # Success: Move job file to completed and return result
-                completed_path = os.path.join(
-                    work_dirs["completed"], os.path.basename(job_file_path)
-                )
-                with open(completed_path, "w") as f:
-                    json.dump(result, f)
-                os.remove(job_file_path)  # Remove from pending
-                return result
+                    # Success: Move job file to completed and return result
+                    completed_path = os.path.join(
+                        work_dirs["completed"], os.path.basename(job_file_path)
+                    )
+                    with open(completed_path, "w") as f:
+                        json.dump(result, f)  # Cache the result itself
+                    os.remove(job_file_path)  # Remove from pending
+                    return result
 
-            except google_exceptions.ResourceExhausted as e:
-                retry_delay = 60
-                if e.retry and e.retry.delay:
-                    retry_delay = e.retry.delay.total_seconds()
-                logging.warning(
-                    f"Rate limit hit for word '{original_text}' on attempt {attempt + 1}/{max_retries}. Waiting {retry_delay}s."
-                )
-                await asyncio.sleep(retry_delay)
-            except Exception as e:
-                logging.error(
-                    f"Failed to process word snippet for '{original_text}' (ID: {word_id}) on attempt {attempt+1}: {e}"
-                )
-                break
+                except google_exceptions.ResourceExhausted as e:
+                    retry_delay = 60
+                    if e.retry and e.retry.delay:
+                        retry_delay = e.retry.delay.total_seconds()
+                    logging.warning(
+                        f"Rate limit hit for word '{original_text}' on attempt {attempt + 1}/{max_retries}. Waiting {retry_delay}s."
+                    )
+                    await asyncio.sleep(retry_delay)
+                except Exception as e:
+                    logging.error(
+                        f"Failed to process word snippet for '{original_text}' (ID: {word_id}) on attempt {attempt+1}: {e}"
+                    )
+                    break
 
-        # If all retries fail, move to the failed queue
-        logging.error(
-            f"Word '{original_text}' failed after {max_retries} attempts. Moving to failed queue."
-        )
-        failed_path = os.path.join(work_dirs["failed"], os.path.basename(job_file_path))
-        shutil.move(job_file_path, failed_path)
-        return None
+            # If all retries fail, move to the failed queue
+            logging.error(
+                f"Word '{original_text}' failed after {max_retries} attempts. Moving to failed queue."
+            )
+            failed_path = os.path.join(
+                work_dirs["failed"], os.path.basename(job_file_path)
+            )
+            shutil.move(job_file_path, failed_path)
+            return None
+        except Exception as e:
+            logging.error(
+                f"Error processing job file {os.path.basename(job_file_path)}: {e}",
+                exc_info=True,
+            )
+            return None
 
 
 async def augment_with_word_alternatives(
@@ -389,9 +399,13 @@ async def augment_with_word_alternatives(
     confidence_threshold: float = 0.9,
 ) -> Dict[str, List[str]]:
     """Phase 3: Manages the async work queue for getting word alternatives in parallel."""
-    work_queue_base = os.path.join(
-        ".cache", "gemini_word_snippets", os.path.basename(image_path)
-    )
+    genai.configure(api_key=config["gemini_api_key"])
+    model = genai.GenerativeModel(config["gemini_model_name"])
+    snippet_margin = config["snippet_margin"]
+
+    # --- Setup Work Queue Directories ---
+    image_basename = os.path.basename(image_path)
+    work_queue_base = os.path.join(".cache", "gemini_word_snippets", image_basename)
     work_dirs = {
         "pending": os.path.join(work_queue_base, "pending"),
         "completed": os.path.join(work_queue_base, "completed"),
@@ -407,88 +421,94 @@ async def augment_with_word_alternatives(
     for d in work_dirs.values():
         os.makedirs(d, exist_ok=True)
 
-    # --- Seed the Queue ---
-    original_image = Image.open(image_path)
-    all_words = []
-    for line in transcription["lines"]:
-        for word in line["words"]:
-            if word["confidence"] < confidence_threshold:
-                word_id = (
-                    f"{line['line_id']}_{word['text']}_{word['bounding_box']['x_min']}"
-                )
-                all_words.append(
-                    {"id": word_id, "box": word["bounding_box"], "text": word["text"]}
-                )
+    # --- Seed the Queue (if not already seeded or forced) ---
+    if not os.listdir(work_dirs["pending"]) and not os.listdir(
+        work_dirs["completed"]
+    ):  # Only seed if truly empty
+        logging.info("Work queue is empty. Seeding with new word snippet jobs.")
+        all_words_to_process = []
+        original_image = Image.open(image_path)
+        for line in transcription["lines"]:
+            for word in line["words"]:
+                if word["confidence"] < confidence_threshold:
+                    word_id = f"{line['line_id']}_{word['text']}_{word['bounding_box']['x_min']}"
+                    all_words_to_process.append(
+                        {
+                            "id": word_id,
+                            "box": word["bounding_box"],
+                            "text": word["text"],
+                        }
+                    )
 
-    logging.info(f"Found {len(all_words)} low-confidence words. Seeding work queue...")
-    already_done = 0
-    already_queued = 0
-    new_to_queue = 0
-
-    for word_data in all_words:
-        job_id = word_data["id"]
-        job_file_path = os.path.join(work_dirs["pending"], f"{job_id}.json")
-        completed_file_path = os.path.join(work_dirs["completed"], f"{job_id}.json")
-
-        if os.path.exists(completed_file_path):
-            already_done += 1
-            continue  # Already done
-        if os.path.exists(job_file_path):
-            already_queued += 1
-            continue  # Already in queue
-        new_to_queue += 1
-
-        box = word_data["box"]
-        snippet = original_image.crop(
-            (box["x_min"] - 5, box["y_min"] - 5, box["x_max"] + 5, box["y_max"] + 5)
+        logging.info(
+            f"Found {len(all_words_to_process)} low-confidence words. Creating job files..."
         )
-        snippet_path = os.path.join(work_dirs["snippets"], f"{job_id}.png")
-        snippet.save(snippet_path, "PNG")
+        for word_data in all_words_to_process:
+            job_id = word_data["id"]
+            job_file_path = os.path.join(work_dirs["pending"], f"{job_id}.json")
 
-        with open(job_file_path, "w") as f:
-            json.dump(
-                {
-                    "id": job_id,
-                    "original_text": word_data["text"],
-                    "snippet_path": snippet_path,
-                },
-                f,
+            box = word_data["box"]
+            snippet = original_image.crop(
+                (
+                    box["x_min"] - snippet_margin,
+                    box["y_min"] - snippet_margin,
+                    box["x_max"] + snippet_margin,
+                    box["y_max"] + snippet_margin,
+                )
             )
+            snippet_path = os.path.join(work_dirs["snippets"], f"{job_id}.png")
+            snippet.save(snippet_path, "PNG")
 
-    # --- Process the Queue ---
-    if already_done:
-        logging.info(f"Already completed {already_done} items.")
-    if already_queued:
-        logging.info(f"Already queued {already_queued} items.")
-    if new_to_queue:
-        logging.info(f"Added {new_to_queue} items to queue.")
-
-    pending_jobs = [
-        os.path.join(work_dirs["pending"], f) for f in os.listdir(work_dirs["pending"])
-    ]
-    if not pending_jobs:
-        logging.info("Work queue is empty. No new words to process.")
+            with open(job_file_path, "w") as f:
+                json.dump(
+                    {
+                        "id": job_id,
+                        "original_text": word_data["text"],
+                        "snippet_path": snippet_path,
+                    },
+                    f,
+                )
     else:
         logging.info(
-            f"Processing {len(pending_jobs)} items from the queue with a concurrency of {concurrency_limit}..."
+            f"Work queue already contains {len(os.listdir(work_dirs['pending']))} pending and {len(os.listdir(work_dirs['completed']))} completed jobs. Resuming."
+        )
+
+    # --- Process the Queue ---
+    pending_jobs_paths = [
+        os.path.join(work_dirs["pending"], f) for f in os.listdir(work_dirs["pending"])
+    ]
+    if not pending_jobs_paths:
+        logging.info("No pending word snippet jobs to process.")
+    else:
+        logging.info(
+            f"Processing {len(pending_jobs_paths)} pending jobs with a concurrency of {concurrency_limit}..."
         )
         semaphore = asyncio.Semaphore(concurrency_limit)
-        model = genai.GenerativeModel(config["gemini_model_name"])
         tasks = [
             _process_single_snippet_file(model, semaphore, job_path, work_dirs)
-            for job_path in pending_jobs
+            for job_path in pending_jobs_paths
         ]
         await asyncio_tqdm.gather(
             *tasks, total=len(tasks), desc="Analyzing word snippets"
         )
 
-    # --- Aggregate Results ---
+    # --- Aggregate Results from Completed Queue ---
     word_alternatives = {}
-    for completed_file in os.listdir(work_dirs["completed"]):
-        with open(os.path.join(work_dirs["completed"], completed_file), "r") as f:
-            result = json.load(f)
-            if result and result.get("alternatives"):
-                word_alternatives[result["id"]] = result["alternatives"]
+    completed_files = os.listdir(work_dirs["completed"])
+    logging.info(f"Aggregating results from {len(completed_files)} completed jobs...")
+    for completed_file_name in completed_files:
+        try:
+            with open(
+                os.path.join(work_dirs["completed"], completed_file_name), "r"
+            ) as f:
+                result = json.load(f)
+                if result and result.get("alternatives"):
+                    word_alternatives[result["id"]] = result["alternatives"]
+        except json.JSONDecodeError as e:
+            logging.error(
+                f"Failed to load completed job file {completed_file_name}: {e}. Skipping."
+            )
+
     return word_alternatives
 
 
@@ -518,6 +538,14 @@ def merge_all_results(
                     s for s in suggestions if _normalize_text(s) != normalized_original
                 ]
     return final_data
+
+
+def _count_words_in_transcription(transcription: Dict) -> int:
+    """Helper to count the total number of words in a transcription dictionary."""
+    count = 0
+    for line in transcription.get("lines", []):
+        count += len(line.get("words", []))
+    return count
 
 
 # ==============================================================================
@@ -564,6 +592,21 @@ async def main_coordinator(
             word_alternatives=word_alternatives,
         )
 
+        # --- NEW DEBUG LOGGING: Verify Word Counts ---
+        if debug:
+            initial_word_count = _count_words_in_transcription(initial_transcription)
+            final_word_count = _count_words_in_transcription(final_result)
+            logging.info(f"DEBUG: Initial Document AI word count: {initial_word_count}")
+            logging.info(f"DEBUG: Final merged result word count: {final_word_count}")
+            if initial_word_count != final_word_count:
+                logging.warning(
+                    "DEBUG: Word count mismatch between initial and final transcription. This might indicate data loss or unexpected modifications."
+                )
+            else:
+                logging.info(
+                    "DEBUG: Word counts match between initial and final transcription."
+                )
+
         image_basename = os.path.basename(image_path)
         final_filename = f"{image_basename}.final.json"
         logging.info(
@@ -580,7 +623,6 @@ async def main_coordinator(
 
 
 def _convert_json_schema_to_gemini_schema(json_dict: dict) -> Dict:
-    # ... (Unchanged)
     if not json_dict:
         return None
     type_map = {
@@ -622,6 +664,7 @@ if __name__ == "__main__":
             "gemini_model_name": os.getenv(
                 "GEMINI_MODEL_NAME", "gemini-1.5-pro-preview-0409"
             ),
+            "snippet_margin": int(5),
         }
         if not config["gemini_api_key"]:
             logging.critical("!!! ERROR: GEMINI_API_KEY not found in .env file.")
