@@ -176,10 +176,17 @@ GEMINI_WORD_ALTERNATIVES_SCHEMA = {
 @cache_to_file(
     ".docai_cache.json", serializer=json.dumps, deserializer=Document.from_json
 )
-def call_doc_ai_api(
+async def call_doc_ai_api(
     *, config: Dict, image_path: str, force_recache: bool = False
 ) -> Optional[Document]:
-    # ... (Unchanged)
+    # Running sync function in executor to not block the event loop
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None, functools.partial(_sync_call_doc_ai, config, image_path)
+    )
+
+
+def _sync_call_doc_ai(config: Dict, image_path: str) -> Optional[Document]:
     try:
         opts = ClientOptions(
             api_endpoint=f"{config['location']}-documentai.googleapis.com"
@@ -247,8 +254,8 @@ def transform_doc_ai_to_custom_json(*, document: Document, image_path: str) -> D
                         "y_max": max(v.y for v in token.layout.bounding_poly.vertices),
                     },
                     "confidence": (
-                        round(token.provenance.confidence, 4)
-                        if token.provenance
+                        round(token.layout.confidence, 4)
+                        if token.layout.confidence
                         else 0.0
                     ),
                     "writing_style": (
@@ -301,116 +308,187 @@ async def call_gemini_for_page_analysis(
         return None
 
 
-async def _process_single_word_snippet(
-    config: Dict,
+async def _process_single_snippet_file(
     model: genai.GenerativeModel,
     semaphore: asyncio.Semaphore,
-    image_snippet: bytes,
-    original_text: str,
-    word_id: str,
+    job_file_path: str,
+    work_dirs: Dict,
     max_retries: int = 3,
 ) -> Optional[Dict]:
-    """Async worker function that analyzes one word snippet, with retries and a semaphore."""
-    system_prompt = f"This is an image of a single, handwritten word. A previous OCR model transcribed it as '{original_text}' with low confidence. What does this word say? Provide a list of the most likely alternatives."
-    image_part = genai_protos.Part(
-        inline_data=genai_protos.Blob(mime_type="image/png", data=image_snippet)
-    )
-    generation_config = genai.GenerationConfig(
-        response_mime_type="application/json",
-        response_schema=GEMINI_WORD_ALTERNATIVES_SCHEMA,
-    )
-
+    """Async worker that processes one job file from the queue, with retries."""
     async with semaphore:
+        with open(job_file_path, "r") as f:
+            job_data = json.load(f)
+        word_id = job_data["id"]
+        original_text = job_data["original_text"]
+        snippet_path = job_data["snippet_path"]
+
+        with open(snippet_path, "rb") as f:
+            image_snippet_bytes = f.read()
+
+        system_prompt = f"This is an image of a single, handwritten word. A previous OCR model transcribed it as '{original_text}' with low confidence. What does this word say? Provide a list of the most likely alternatives."
+        image_part = genai_protos.Part(
+            inline_data=genai_protos.Blob(
+                mime_type="image/png", data=image_snippet_bytes
+            )
+        )
+        generation_config = genai.GenerationConfig(
+            response_mime_type="application/json",
+            response_schema=GEMINI_WORD_ALTERNATIVES_SCHEMA,
+        )
+
         for attempt in range(max_retries):
             try:
                 response = await model.generate_content_async(
                     [system_prompt, image_part], generation_config=generation_config
                 )
-                alternatives = json.loads(response.text).get("alternatives", [])
-                return {"id": word_id, "alternatives": alternatives}
+                result = {
+                    "id": word_id,
+                    "alternatives": json.loads(response.text).get("alternatives", []),
+                }
+
+                # Success: Move job file to completed and return result
+                completed_path = os.path.join(
+                    work_dirs["completed"], os.path.basename(job_file_path)
+                )
+                with open(completed_path, "w") as f:
+                    json.dump(result, f)
+                os.remove(job_file_path)  # Remove from pending
+                return result
+
             except google_exceptions.ResourceExhausted as e:
                 retry_delay = 60
                 if e.retry and e.retry.delay:
                     retry_delay = e.retry.delay.total_seconds()
                 logging.warning(
-                    f"Rate limit hit for word '{original_text}' on attempt {attempt + 1}/{max_retries}. Waiting {retry_delay}s. Error: {e}"
+                    f"Rate limit hit for word '{original_text}' on attempt {attempt + 1}/{max_retries}. Waiting {retry_delay}s."
                 )
                 await asyncio.sleep(retry_delay)
             except Exception as e:
                 logging.error(
                     f"Failed to process word snippet for '{original_text}' (ID: {word_id}) on attempt {attempt+1}: {e}"
                 )
-                return None  # Do not retry on other errors
+                break
 
-        logging.error(f"Word '{original_text}' failed after {max_retries} attempts.")
+        # If all retries fail, move to the failed queue
+        logging.error(
+            f"Word '{original_text}' failed after {max_retries} attempts. Moving to failed queue."
+        )
+        failed_path = os.path.join(work_dirs["failed"], os.path.basename(job_file_path))
+        shutil.move(job_file_path, failed_path)
         return None
 
 
-@cache_to_file(
-    ".gemini_word_alternatives.cache.json",
-    serializer=json.dumps,
-    deserializer=json.loads,
-)
-async def call_gemini_for_word_alternatives_parallel(
+async def augment_with_word_alternatives(
     *,
     config: Dict,
     image_path: str,
     transcription: Dict,
     force_recache: bool = False,
-    confidence_threshold: float = 0.9,
     concurrency_limit: int = 20,
+    confidence_threshold: float = 0.9,
 ) -> Dict[str, List[str]]:
-    """Phase 3: Finds low-confidence words, crops them, and gets alternatives in parallel using asyncio and a semaphore."""
-    low_conf_words = []
+    """Phase 3: Manages the async work queue for getting word alternatives in parallel."""
+    work_queue_base = os.path.join(
+        ".cache", "gemini_word_snippets", os.path.basename(image_path)
+    )
+    work_dirs = {
+        "pending": os.path.join(work_queue_base, "pending"),
+        "completed": os.path.join(work_queue_base, "completed"),
+        "failed": os.path.join(work_queue_base, "failed"),
+        "snippets": os.path.join(work_queue_base, "snippets"),
+    }
+
+    if force_recache and os.path.exists(work_queue_base):
+        logging.warning(
+            f"Force recache requested. Deleting Gemini work queue: {work_queue_base}"
+        )
+        shutil.rmtree(work_queue_base)
+    for d in work_dirs.values():
+        os.makedirs(d, exist_ok=True)
+
+    # --- Seed the Queue ---
+    original_image = Image.open(image_path)
+    all_words = []
     for line in transcription["lines"]:
         for word in line["words"]:
             if word["confidence"] < confidence_threshold:
                 word_id = (
                     f"{line['line_id']}_{word['text']}_{word['bounding_box']['x_min']}"
                 )
-                low_conf_words.append(
+                all_words.append(
                     {"id": word_id, "box": word["bounding_box"], "text": word["text"]}
                 )
 
-    if not low_conf_words:
-        logging.info("No low-confidence words found to analyze.")
-        return {}
+    logging.info(f"Found {len(all_words)} low-confidence words. Seeding work queue...")
+    already_done = 0
+    already_queued = 0
+    new_to_queue = 0
 
-    logging.info(
-        f"Found {len(low_conf_words)} low-confidence words. Processing in parallel with a concurrency limit of {concurrency_limit}..."
-    )
+    for word_data in all_words:
+        job_id = word_data["id"]
+        job_file_path = os.path.join(work_dirs["pending"], f"{job_id}.json")
+        completed_file_path = os.path.join(work_dirs["completed"], f"{job_id}.json")
 
-    original_image = Image.open(image_path)
-    semaphore = asyncio.Semaphore(concurrency_limit)
-    model = genai.GenerativeModel(
-        config["gemini_model_name"]
-    )  # Create one model instance to be shared
-    tasks = []
+        if os.path.exists(completed_file_path):
+            already_done += 1
+            continue  # Already done
+        if os.path.exists(job_file_path):
+            already_queued += 1
+            continue  # Already in queue
+        new_to_queue += 1
 
-    for word_data in low_conf_words:
         box = word_data["box"]
         snippet = original_image.crop(
             (box["x_min"] - 5, box["y_min"] - 5, box["x_max"] + 5, box["y_max"] + 5)
         )
-        import io
+        snippet_path = os.path.join(work_dirs["snippets"], f"{job_id}.png")
+        snippet.save(snippet_path, "PNG")
 
-        with io.BytesIO() as output:
-            snippet.save(output, format="PNG")
-            image_bytes = output.getvalue()
+        with open(job_file_path, "w") as f:
+            json.dump(
+                {
+                    "id": job_id,
+                    "original_text": word_data["text"],
+                    "snippet_path": snippet_path,
+                },
+                f,
+            )
 
-        task = _process_single_word_snippet(
-            config, model, semaphore, image_bytes, word_data["text"], word_data["id"]
+    # --- Process the Queue ---
+    if already_done:
+        logging.info(f"Already completed {already_done} items.")
+    if already_queued:
+        logging.info(f"Already queued {already_queued} items.")
+    if new_to_queue:
+        logging.info(f"Added {new_to_queue} items to queue.")
+
+    pending_jobs = [
+        os.path.join(work_dirs["pending"], f) for f in os.listdir(work_dirs["pending"])
+    ]
+    if not pending_jobs:
+        logging.info("Work queue is empty. No new words to process.")
+    else:
+        logging.info(
+            f"Processing {len(pending_jobs)} items from the queue with a concurrency of {concurrency_limit}..."
         )
-        tasks.append(task)
+        semaphore = asyncio.Semaphore(concurrency_limit)
+        model = genai.GenerativeModel(config["gemini_model_name"])
+        tasks = [
+            _process_single_snippet_file(model, semaphore, job_path, work_dirs)
+            for job_path in pending_jobs
+        ]
+        await asyncio_tqdm.gather(
+            *tasks, total=len(tasks), desc="Analyzing word snippets"
+        )
 
+    # --- Aggregate Results ---
     word_alternatives = {}
-    for future in asyncio_tqdm.as_completed(
-        tasks, total=len(tasks), desc="Analyzing word snippets"
-    ):
-        result = await future
-        if result and result.get("alternatives"):
-            word_alternatives[result["id"]] = result["alternatives"]
-
+    for completed_file in os.listdir(work_dirs["completed"]):
+        with open(os.path.join(work_dirs["completed"], completed_file), "r") as f:
+            result = json.load(f)
+            if result and result.get("alternatives"):
+                word_alternatives[result["id"]] = result["alternatives"]
     return word_alternatives
 
 
@@ -453,13 +531,9 @@ async def main_coordinator(
         genai.configure(api_key=config["gemini_api_key"])
 
         logging.info("--- Phase 1: Document AI Transcription ---")
-        loop = asyncio.get_running_loop()
         raw_document = await call_doc_ai_api(
-            config=config,
-            image_path=image_path,
-            force_recache=force_recache,
+            config=config, image_path=image_path, force_recache=force_recache
         )
-
         if not raw_document:
             raise ValueError("Failed to get Document AI result.")
         initial_transcription = transform_doc_ai_to_custom_json(
@@ -474,8 +548,8 @@ async def main_coordinator(
             logging.warning("Failed to get page-level analysis. Continuing without it.")
             page_analysis = {}
 
-        logging.info("--- Phase 3: Gemini Word-Level 'Micro' Analysis (Parallel) ---")
-        word_alternatives = await call_gemini_for_word_alternatives_parallel(
+        logging.info("--- Phase 3: Gemini Word-Level 'Micro' Analysis (Work Queue) ---")
+        word_alternatives = await augment_with_word_alternatives(
             config=config,
             image_path=image_path,
             transcription=initial_transcription,
@@ -583,6 +657,7 @@ if __name__ == "__main__":
     log_level = logging.INFO if args.verbose else logging.WARNING
     logging.basicConfig(level=log_level, format="[%(levelname)s] %(message)s")
 
+    # Run the main async coordinator
     exit_code = asyncio.run(
         main_coordinator(
             image_path=args.image,
