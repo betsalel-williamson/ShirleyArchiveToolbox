@@ -24,6 +24,7 @@ dist-ssr
 .idea
 .vscode
 
+
 # Environment variables
 .env
 .env.local
@@ -34,6 +35,8 @@ dist-ssr
 # Data directories (specific to this app)
 data_in_progress/
 data_validated/
+data_source/
+public/images/
 
 # Tests
 /coverage
