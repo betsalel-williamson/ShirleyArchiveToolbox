@@ -317,30 +317,32 @@ def create_minimized_contextual_chunks(
     return contextual_chunks
 
 
-def _process_batch_with_autosplit(
+def _process_batch_file(
     *,
     model: genai.GenerativeModel,
     image_part: genai_protos.Part,
-    batch: List[Dict],
+    batch_file_path: str,
     schema: Dict,
     generation_config: genai.GenerationConfig,
     debug: bool,
-    max_retries: int = 3,
-) -> List[Dict]:
+) -> Optional[Dict]:
     """
-    The recursive worker. Tries to process a batch, and if it fails due to size,
-    splits the batch in half and calls itself on the two halves. Returns a LIST of results.
+    The smart worker. Processes a single batch file from the queue, handles errors,
+    and splits the batch if it's too large.
     """
-    # ... (Unchanged)
-    system_prompt = f"Analyze the image. For the provided list of text lines (minimized format: i=id, t=text, b=box, w=words to check), suggest alternatives for the words in 'w'. Also, provide a page-level analysis and find graphical elements. Respond in JSON using the provided schema.\nBatch:\n{json.dumps(batch)}"
+    with open(batch_file_path, "r") as f:
+        batch_data = json.load(f)
+
+    system_prompt = f"Analyze the image. For the provided list of text lines (minimized format: i=id, t=text, b=box, w=words to check), suggest alternatives for the words in 'w'. Also, provide a page-level analysis and find graphical elements. Respond in JSON using the provided schema.\nBatch:\n{json.dumps(batch_data)}"
     if debug:
         debug_dir = "debug"
         os.makedirs(debug_dir, exist_ok=True)
-        batch_hash = hashlib.sha1(str(batch).encode()).hexdigest()[:10]
+        batch_hash = hashlib.sha1(str(batch_data).encode()).hexdigest()[:10]
         debug_path = os.path.join(debug_dir, f"gemini_prompt_batch_{batch_hash}.log")
         logging.info(f"Saving Gemini prompt for batch to: {debug_path}")
         with open(debug_path, "w") as f:
             f.write(system_prompt)
+
     FINISH_REASON_EXPLANATIONS = {
         1: "OK",
         2: "MAX_TOKENS",
@@ -348,66 +350,69 @@ def _process_batch_with_autosplit(
         4: "RECITATION",
         5: "OTHER",
     }
-    for attempt in range(max_retries):
-        try:
-            response = model.generate_content(
-                [system_prompt, image_part], generation_config=generation_config
-            )
-            if not response.parts:
-                finish_reason = getattr(response.candidates[0], "finish_reason", 0)
-                if finish_reason != 2:
-                    logging.error(
-                        f"Gemini response for batch contained no valid parts. Finish Reason: {FINISH_REASON_EXPLANATIONS.get(finish_reason, 'UNKNOWN')}"
-                    )
-                    return []
-            return [json.loads(response.text)]
-        except google_exceptions.ResourceExhausted as e:
-            retry_delay = 60
-            logging.warning(
-                f"Rate limit hit on attempt {attempt + 1}/{max_retries}. Waiting {retry_delay}s. Error: {e}"
-            )
-            time.sleep(retry_delay)
-        except ValueError as e:
-            logging.warning(
-                f"Batch failed, likely with MAX_TOKENS. len(batch)={len(batch)}. Error: {e}"
-            )
-            if len(batch) > 1:
-                logging.info("Splitting batch and retrying recursively.")
-                midpoint = len(batch) // 2
-                first_half_results = _process_batch_with_autosplit(
-                    model=model,
-                    image_part=image_part,
-                    batch=batch[:midpoint],
-                    schema=schema,
-                    generation_config=generation_config,
-                    debug=debug,
-                    max_retries=max_retries,
-                )
-                second_half_results = _process_batch_with_autosplit(
-                    model=model,
-                    image_part=image_part,
-                    batch=batch[midpoint:],
-                    schema=schema,
-                    generation_config=generation_config,
-                    debug=debug,
-                    max_retries=max_retries,
-                )
-                return first_half_results + second_half_results
-            else:
-                logging.error(
-                    "A batch of size 1 still failed. This line is too complex to process. Skipping."
-                )
-                return []
-        except Exception as e:
+
+    try:
+        response = model.generate_content(
+            [system_prompt, image_part], generation_config=generation_config
+        )
+        if not response.parts:
+            finish_reason = getattr(response.candidates[0], "finish_reason", 0)
+            if finish_reason == 2:  # MAX_TOKENS
+                raise ValueError(
+                    "MAX_TOKENS"
+                )  # Trigger the recursive split logic below
             logging.error(
-                f"An unexpected error occurred during Gemini batch API call: {e}",
-                exc_info=True,
+                f"Gemini response for batch file {os.path.basename(batch_file_path)} contained no valid parts. Finish Reason: {FINISH_REASON_EXPLANATIONS.get(finish_reason, 'UNKNOWN')}"
             )
-            return []
-    logging.error(
-        f"Failed to get a valid response from Gemini for batch after {max_retries} attempts."
-    )
-    return []
+            return None  # Hard failure for other reasons
+
+        # Success!
+        os.remove(batch_file_path)
+        logging.info(
+            f"Successfully processed and deleted batch file: {os.path.basename(batch_file_path)}"
+        )
+        return json.loads(response.text)
+
+    except ValueError:  # This specifically catches our MAX_TOKENS trigger
+        logging.warning(
+            f"Batch file {os.path.basename(batch_file_path)} failed with MAX_TOKENS. len(batch)={len(batch_data)}."
+        )
+        os.remove(batch_file_path)  # Delete the failed oversized batch file
+
+        if len(batch_data) > 1:
+            logging.info("Splitting batch and creating new work items.")
+            midpoint = len(batch_data) // 2
+            first_half, second_half = batch_data[:midpoint], batch_data[midpoint:]
+
+            # Create two new batch files in the same directory
+            base_dir = os.path.dirname(batch_file_path)
+            for half in [first_half, second_half]:
+                half_hash = hashlib.sha1(
+                    json.dumps(half, sort_keys=True).encode()
+                ).hexdigest()
+                new_batch_path = os.path.join(base_dir, f"batch_{half_hash}.json")
+                with open(new_batch_path, "w") as f:
+                    json.dump(half, f)
+        else:
+            logging.error(
+                "A batch of size 1 still failed. This line is too complex. Moving to failed queue."
+            )
+            failed_dir = os.path.join(
+                os.path.dirname(os.path.dirname(batch_file_path)), "failed"
+            )
+            os.makedirs(failed_dir, exist_ok=True)
+            shutil.move(
+                batch_file_path,
+                os.path.join(failed_dir, os.path.basename(batch_file_path)),
+            )
+        return None  # Indicate that this specific call didn't yield a result, but work was re-queued
+
+    except Exception as e:
+        logging.error(
+            f"An unexpected error occurred processing {os.path.basename(batch_file_path)}: {e}",
+            exc_info=True,
+        )
+        return None
 
 
 def augment_transcription_with_gemini(
@@ -420,7 +425,7 @@ def augment_transcription_with_gemini(
     debug: bool = False,
     batch_size: int = 5,
 ) -> Optional[Dict]:
-    """Orchestrates batch processing with per-batch caching and recursive splitting."""
+    """Orchestrates batch processing via a file-based work queue for maximum resilience."""
     genai.configure(api_key=config["gemini_api_key"])
     model = genai.GenerativeModel(config["gemini_model_name"])
     with open(image_path, "rb") as f:
@@ -434,83 +439,78 @@ def augment_transcription_with_gemini(
         response_schema=gemini_schema,
         max_output_tokens=8192,
     )
-    batches = [
-        contextual_chunks[i : i + batch_size]
-        for i in range(0, len(contextual_chunks), batch_size)
-    ]
-    logging.info(
-        f"Processing {len(contextual_chunks)} lines in {len(batches)} initial batches of up to {batch_size} lines each."
+
+    # --- Setup Work Queue Directories ---
+    work_queue_dir = os.path.join(
+        ".cache", "gemini_work_queue", os.path.basename(image_path)
     )
-    batch_cache_dir = os.path.join(
-        ".cache", "gemini_batches", os.path.basename(image_path)
-    )
-    if force_recache and os.path.exists(batch_cache_dir):
+    pending_dir = os.path.join(work_queue_dir, "pending")
+    failed_dir = os.path.join(work_queue_dir, "failed")
+
+    if force_recache and os.path.exists(work_queue_dir):
         logging.warning(
-            f"Force recache requested. Deleting Gemini batch cache directory: {batch_cache_dir}"
+            f"Force recache requested. Deleting Gemini work queue: {work_queue_dir}"
         )
-        shutil.rmtree(batch_cache_dir)
-    os.makedirs(batch_cache_dir, exist_ok=True)
+        shutil.rmtree(work_queue_dir)
+    os.makedirs(pending_dir, exist_ok=True)
+    os.makedirs(failed_dir, exist_ok=True)
+
+    # --- Seed the Queue (if empty) ---
+    if not os.listdir(pending_dir):
+        logging.info("Work queue is empty. Seeding with new batches.")
+        batches = [
+            contextual_chunks[i : i + batch_size]
+            for i in range(0, len(contextual_chunks), batch_size)
+        ]
+        for batch in batches:
+            batch_hash = hashlib.sha1(
+                json.dumps(batch, sort_keys=True).encode()
+            ).hexdigest()
+            batch_path = os.path.join(pending_dir, f"batch_{batch_hash}.json")
+            with open(batch_path, "w") as f:
+                json.dump(batch, f)
+
+    # --- Process the Queue ---
     all_augmentations = {
         "page_analysis": {},
         "low_confidence_alternatives": [],
         "graphical_elements": [],
     }
+    while True:
+        pending_files = sorted(
+            [os.path.join(pending_dir, f) for f in os.listdir(pending_dir)]
+        )
+        if not pending_files:
+            logging.info("Work queue is empty. Processing complete.")
+            break
 
-    for i, batch in enumerate(batches):
-        logging.info(f"Processing initial batch {i+1}/{len(batches)}...")
-        batch_hash = hashlib.sha1(
-            json.dumps(batch, sort_keys=True).encode()
-        ).hexdigest()
-        batch_cache_path = os.path.join(batch_cache_dir, f"batch_{batch_hash}.json")
-        batch_results = None
-        if os.path.exists(batch_cache_path):
-            logging.info(f"Found cache for batch {i+1}. Loading.")
-            with open(batch_cache_path, "r") as f:
-                batch_results = json.load(f)
-        if not batch_results:
-            batch_results = _process_batch_with_autosplit(
-                model=model,
-                image_part=image_part,
-                batch=batch,
-                schema=schema,
-                generation_config=generation_config,
-                debug=debug,
-            )
-            if batch_results:
-                logging.info(
-                    f"Caching result for initial batch {i+1} to {batch_cache_path}"
-                )
-                with open(batch_cache_path, "w") as f:
-                    json.dump(batch_results, f, indent=2)
+        batch_file_path = pending_files[0]
+        logging.info(f"Processing work item: {os.path.basename(batch_file_path)}")
+        result = _process_batch_file(
+            model=model,
+            image_part=image_part,
+            batch_file_path=batch_file_path,
+            schema=schema,
+            generation_config=generation_config,
+            debug=debug,
+        )
 
-        if batch_results:
-            # --- HARDENING FIX IS HERE ---
-            for res in batch_results:
-                if not isinstance(res, dict):
-                    logging.warning(
-                        f"Skipping malformed item in cached batch results: {res}"
-                    )
-                    continue
-                if not all_augmentations["page_analysis"] and "page_analysis" in res:
-                    all_augmentations["page_analysis"] = res["page_analysis"]
-                all_augmentations["low_confidence_alternatives"].extend(
-                    res.get("low_confidence_alternatives", [])
-                )
-                all_augmentations["graphical_elements"].extend(
-                    res.get("graphical_elements", [])
-                )
-        else:
-            logging.error(
-                f"Initial batch {i+1} failed after all attempts. The final result may be incomplete."
+        if result:
+            if not all_augmentations["page_analysis"] and "page_analysis" in result:
+                all_augmentations["page_analysis"] = result["page_analysis"]
+            all_augmentations["low_confidence_alternatives"].extend(
+                result.get("low_confidence_alternatives", [])
             )
-        if i < len(batches) - 1:
-            time.sleep(1)
+            all_augmentations["graphical_elements"].extend(
+                result.get("graphical_elements", [])
+            )
 
     unique_elements = {
         json.dumps(d, sort_keys=True): d
         for d in all_augmentations["graphical_elements"]
     }.values()
     all_augmentations["graphical_elements"] = list(unique_elements)
+
     return all_augmentations
 
 
@@ -565,7 +565,7 @@ def main_coordinator(
             document=raw_document, image_path=image_path
         )
 
-        logging.info("--- Phase 2: Gemini Qualitative Analysis (in Batches) ---")
+        logging.info("--- Phase 2: Gemini Qualitative Analysis (Work Queue) ---")
         contextual_chunks = create_minimized_contextual_chunks(initial_transcription)
         if not contextual_chunks:
             logging.warning("No low-confidence words found. Skipping Gemini analysis.")
@@ -584,8 +584,8 @@ def main_coordinator(
                 gemini_augmentations.get("low_confidence_alternatives")
                 or gemini_augmentations.get("graphical_elements")
             ):
-                logging.error(
-                    "Failed to get any valid Gemini analysis results after batch processing. The final JSON will be incomplete."
+                logging.warning(
+                    "No valid Gemini analysis results were produced. The final JSON will be un-augmented."
                 )
                 final_result = initial_transcription
             else:
