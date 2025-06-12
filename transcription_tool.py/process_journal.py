@@ -7,6 +7,7 @@ import logging
 import functools
 import hashlib
 import shutil
+import asyncio
 from typing import Dict, Optional, Callable, Any, List
 from dotenv import load_dotenv
 
@@ -19,6 +20,7 @@ try:
     import google.generativeai as genai
     from google.generativeai import protos as genai_protos
     from google.api_core import exceptions as google_exceptions
+    from tqdm.asyncio import tqdm as asyncio_tqdm
 except ImportError:
     logging.critical(
         "Error: Required libraries not found. Please run: pip install -r requirements.txt"
@@ -38,7 +40,7 @@ def cache_to_file(
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Optional[Any]:
+        async def wrapper(*args, **kwargs) -> Optional[Any]:
             image_path = kwargs.get("image_path")
             if not image_path:
                 raise ValueError("Cached function must have 'image_path' kwarg.")
@@ -53,10 +55,16 @@ def cache_to_file(
                 logging.info(f"Found cache: {cache_path}. Loading.")
                 with open(cache_path, "r") as f:
                     return deserializer(f.read())
+
             logging.info(
                 f"No cache found at {cache_path}. Executing '{func.__name__}'."
             )
-            result = func(*args, **kwargs)
+            result = (
+                await func(*args, **kwargs)
+                if asyncio.iscoroutinefunction(func)
+                else func(*args, **kwargs)
+            )
+
             if result:
                 os.makedirs(cache_dir, exist_ok=True)
                 logging.info(f"Caching result to: {cache_path}")
@@ -148,36 +156,17 @@ FINAL_OUTPUT_SCHEMA = {
         },
     },
 }
-GEMINI_AUGMENTATION_SCHEMA = {
+GEMINI_PAGE_ANALYSIS_SCHEMA = {
     "type": "OBJECT",
     "properties": {
         "page_analysis": FINAL_OUTPUT_SCHEMA["properties"]["page_analysis"],
-        "low_confidence_alternatives": {
-            "type": "ARRAY",
-            "items": {
-                "type": "OBJECT",
-                "properties": {
-                    "line_id": {"type": "STRING"},
-                    "word_alternatives": {
-                        "type": "ARRAY",
-                        "items": {
-                            "type": "OBJECT",
-                            "properties": {
-                                "original_text": {"type": "STRING"},
-                                "suggestions": {
-                                    "type": "ARRAY",
-                                    "items": {"type": "STRING"},
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
         "graphical_elements": FINAL_OUTPUT_SCHEMA["properties"]["graphical_elements"],
     },
 }
-
+GEMINI_WORD_ALTERNATIVES_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {"alternatives": {"type": "ARRAY", "items": {"type": "STRING"}}},
+}
 
 # ==============================================================================
 # --- PIPELINE FUNCTIONS ---
@@ -283,235 +272,146 @@ def transform_doc_ai_to_custom_json(*, document: Document, image_path: str) -> D
     return output_data
 
 
-def create_minimized_contextual_chunks(
-    transcription: Dict, threshold: float = 0.90
-) -> List[Dict]:
-    """Step 2a: Finds lines with low-confidence words and packages them into a token-efficient format."""
+@cache_to_file(
+    ".gemini_page_analysis.cache.json", serializer=json.dumps, deserializer=json.loads
+)
+async def call_gemini_for_page_analysis(
+    *, config: Dict, image_path: str, force_recache: bool = False
+) -> Optional[Dict]:
+    """Phase 2: Performs a single 'macro' analysis of the full page using asyncio."""
     # ... (Unchanged)
-    contextual_chunks = []
-    for line in transcription.get("lines", []):
-        low_conf_words = [
-            word["text"]
-            for word in line.get("words", [])
-            if word.get("confidence", 1.0) < threshold
-        ]
-        if low_conf_words:
-            all_line_boxes = [w["bounding_box"] for w in line.get("words", [])]
-            line_box = [
-                min(b["x_min"] for b in all_line_boxes),
-                min(b["y_min"] for b in all_line_boxes),
-                max(b["x_max"] for b in all_line_boxes),
-                max(b["y_max"] for b in all_line_boxes),
-            ]
-            contextual_chunks.append(
-                {
-                    "i": line["line_id"],
-                    "t": " ".join(word["text"] for word in line.get("words", [])),
-                    "b": line_box,
-                    "w": low_conf_words,
-                }
-            )
-    logging.info(
-        f"Found {len(contextual_chunks)} lines with low-confidence words to analyze."
-    )
-    return contextual_chunks
-
-
-def _process_batch_file(
-    *,
-    model: genai.GenerativeModel,
-    image_part: genai_protos.Part,
-    batch_file_path: str,
-    schema: Dict,
-    generation_config: genai.GenerationConfig,
-    debug: bool,
-) -> Optional[Dict]:
-    """
-    The smart worker. Processes a single batch file from the queue, handles errors,
-    and splits the batch if it's too large.
-    """
-    with open(batch_file_path, "r") as f:
-        batch_data = json.load(f)
-
-    system_prompt = f"Analyze the image. For the provided list of text lines (minimized format: i=id, t=text, b=box, w=words to check), suggest alternatives for the words in 'w'. Also, provide a page-level analysis and find graphical elements. Respond in JSON using the provided schema.\nBatch:\n{json.dumps(batch_data)}"
-    if debug:
-        debug_dir = "debug"
-        os.makedirs(debug_dir, exist_ok=True)
-        batch_hash = hashlib.sha1(str(batch_data).encode()).hexdigest()[:10]
-        debug_path = os.path.join(debug_dir, f"gemini_prompt_batch_{batch_hash}.log")
-        logging.info(f"Saving Gemini prompt for batch to: {debug_path}")
-        with open(debug_path, "w") as f:
-            f.write(system_prompt)
-
-    FINISH_REASON_EXPLANATIONS = {
-        1: "OK",
-        2: "MAX_TOKENS",
-        3: "SAFETY",
-        4: "RECITATION",
-        5: "OTHER",
-    }
-
-    try:
-        response = model.generate_content(
-            [system_prompt, image_part], generation_config=generation_config
-        )
-        if not response.parts:
-            finish_reason = getattr(response.candidates[0], "finish_reason", 0)
-            if finish_reason == 2:  # MAX_TOKENS
-                raise ValueError(
-                    "MAX_TOKENS"
-                )  # Trigger the recursive split logic below
-            logging.error(
-                f"Gemini response for batch file {os.path.basename(batch_file_path)} contained no valid parts. Finish Reason: {FINISH_REASON_EXPLANATIONS.get(finish_reason, 'UNKNOWN')}"
-            )
-            return None  # Hard failure for other reasons
-
-        # Success!
-        os.remove(batch_file_path)
-        logging.info(
-            f"Successfully processed and deleted batch file: {os.path.basename(batch_file_path)}"
-        )
-        return json.loads(response.text)
-
-    except ValueError:  # This specifically catches our MAX_TOKENS trigger
-        logging.warning(
-            f"Batch file {os.path.basename(batch_file_path)} failed with MAX_TOKENS. len(batch)={len(batch_data)}."
-        )
-        os.remove(batch_file_path)  # Delete the failed oversized batch file
-
-        if len(batch_data) > 1:
-            logging.info("Splitting batch and creating new work items.")
-            midpoint = len(batch_data) // 2
-            first_half, second_half = batch_data[:midpoint], batch_data[midpoint:]
-
-            # Create two new batch files in the same directory
-            base_dir = os.path.dirname(batch_file_path)
-            for half in [first_half, second_half]:
-                half_hash = hashlib.sha1(
-                    json.dumps(half, sort_keys=True).encode()
-                ).hexdigest()
-                new_batch_path = os.path.join(base_dir, f"batch_{half_hash}.json")
-                with open(new_batch_path, "w") as f:
-                    json.dump(half, f)
-        else:
-            logging.error(
-                "A batch of size 1 still failed. This line is too complex. Moving to failed queue."
-            )
-            failed_dir = os.path.join(
-                os.path.dirname(os.path.dirname(batch_file_path)), "failed"
-            )
-            os.makedirs(failed_dir, exist_ok=True)
-            shutil.move(
-                batch_file_path,
-                os.path.join(failed_dir, os.path.basename(batch_file_path)),
-            )
-        return None  # Indicate that this specific call didn't yield a result, but work was re-queued
-
-    except Exception as e:
-        logging.error(
-            f"An unexpected error occurred processing {os.path.basename(batch_file_path)}: {e}",
-            exc_info=True,
-        )
-        return None
-
-
-def augment_transcription_with_gemini(
-    *,
-    config: Dict,
-    image_path: str,
-    contextual_chunks: List[Dict],
-    schema: Dict,
-    force_recache: bool = False,
-    debug: bool = False,
-    batch_size: int = 5,
-) -> Optional[Dict]:
-    """Orchestrates batch processing via a file-based work queue for maximum resilience."""
-    genai.configure(api_key=config["gemini_api_key"])
     model = genai.GenerativeModel(config["gemini_model_name"])
+    system_prompt = "Analyze the entire page. Identify all non-text graphical elements (doodles, stains) and provide a holistic analysis of the page's ink color and writing style. Respond in JSON using the provided schema."
     with open(image_path, "rb") as f:
         image_data = f.read()
     image_part = genai_protos.Part(
         inline_data=genai_protos.Blob(mime_type="image/jpeg", data=image_data)
     )
-    gemini_schema = genai_protos.Schema(**_convert_json_schema_to_gemini_schema(schema))
     generation_config = genai.GenerationConfig(
         response_mime_type="application/json",
-        response_schema=gemini_schema,
-        max_output_tokens=8192,
+        response_schema=GEMINI_PAGE_ANALYSIS_SCHEMA,
+    )
+    try:
+        response = await model.generate_content_async(
+            [system_prompt, image_part], generation_config=generation_config
+        )
+        return json.loads(response.text)
+    except Exception as e:
+        logging.error(f"Page-level analysis with Gemini failed: {e}", exc_info=True)
+        return None
+
+
+async def _process_single_word_snippet(
+    config: Dict,
+    model: genai.GenerativeModel,
+    semaphore: asyncio.Semaphore,
+    image_snippet: bytes,
+    original_text: str,
+    word_id: str,
+    max_retries: int = 3,
+) -> Optional[Dict]:
+    """Async worker function that analyzes one word snippet, with retries and a semaphore."""
+    system_prompt = f"This is an image of a single, handwritten word. A previous OCR model transcribed it as '{original_text}' with low confidence. What does this word say? Provide a list of the most likely alternatives."
+    image_part = genai_protos.Part(
+        inline_data=genai_protos.Blob(mime_type="image/png", data=image_snippet)
+    )
+    generation_config = genai.GenerationConfig(
+        response_mime_type="application/json",
+        response_schema=GEMINI_WORD_ALTERNATIVES_SCHEMA,
     )
 
-    # --- Setup Work Queue Directories ---
-    work_queue_dir = os.path.join(
-        ".cache", "gemini_work_queue", os.path.basename(image_path)
+    async with semaphore:
+        for attempt in range(max_retries):
+            try:
+                response = await model.generate_content_async(
+                    [system_prompt, image_part], generation_config=generation_config
+                )
+                alternatives = json.loads(response.text).get("alternatives", [])
+                return {"id": word_id, "alternatives": alternatives}
+            except google_exceptions.ResourceExhausted as e:
+                retry_delay = 60
+                if e.retry and e.retry.delay:
+                    retry_delay = e.retry.delay.total_seconds()
+                logging.warning(
+                    f"Rate limit hit for word '{original_text}' on attempt {attempt + 1}/{max_retries}. Waiting {retry_delay}s. Error: {e}"
+                )
+                await asyncio.sleep(retry_delay)
+            except Exception as e:
+                logging.error(
+                    f"Failed to process word snippet for '{original_text}' (ID: {word_id}) on attempt {attempt+1}: {e}"
+                )
+                return None  # Do not retry on other errors
+
+        logging.error(f"Word '{original_text}' failed after {max_retries} attempts.")
+        return None
+
+
+@cache_to_file(
+    ".gemini_word_alternatives.cache.json",
+    serializer=json.dumps,
+    deserializer=json.loads,
+)
+async def call_gemini_for_word_alternatives_parallel(
+    *,
+    config: Dict,
+    image_path: str,
+    transcription: Dict,
+    force_recache: bool = False,
+    confidence_threshold: float = 0.9,
+    concurrency_limit: int = 20,
+) -> Dict[str, List[str]]:
+    """Phase 3: Finds low-confidence words, crops them, and gets alternatives in parallel using asyncio and a semaphore."""
+    low_conf_words = []
+    for line in transcription["lines"]:
+        for word in line["words"]:
+            if word["confidence"] < confidence_threshold:
+                word_id = (
+                    f"{line['line_id']}_{word['text']}_{word['bounding_box']['x_min']}"
+                )
+                low_conf_words.append(
+                    {"id": word_id, "box": word["bounding_box"], "text": word["text"]}
+                )
+
+    if not low_conf_words:
+        logging.info("No low-confidence words found to analyze.")
+        return {}
+
+    logging.info(
+        f"Found {len(low_conf_words)} low-confidence words. Processing in parallel with a concurrency limit of {concurrency_limit}..."
     )
-    pending_dir = os.path.join(work_queue_dir, "pending")
-    failed_dir = os.path.join(work_queue_dir, "failed")
 
-    if force_recache and os.path.exists(work_queue_dir):
-        logging.warning(
-            f"Force recache requested. Deleting Gemini work queue: {work_queue_dir}"
+    original_image = Image.open(image_path)
+    semaphore = asyncio.Semaphore(concurrency_limit)
+    model = genai.GenerativeModel(
+        config["gemini_model_name"]
+    )  # Create one model instance to be shared
+    tasks = []
+
+    for word_data in low_conf_words:
+        box = word_data["box"]
+        snippet = original_image.crop(
+            (box["x_min"] - 5, box["y_min"] - 5, box["x_max"] + 5, box["y_max"] + 5)
         )
-        shutil.rmtree(work_queue_dir)
-    os.makedirs(pending_dir, exist_ok=True)
-    os.makedirs(failed_dir, exist_ok=True)
+        import io
 
-    # --- Seed the Queue (if empty) ---
-    if not os.listdir(pending_dir):
-        logging.info("Work queue is empty. Seeding with new batches.")
-        batches = [
-            contextual_chunks[i : i + batch_size]
-            for i in range(0, len(contextual_chunks), batch_size)
-        ]
-        for batch in batches:
-            batch_hash = hashlib.sha1(
-                json.dumps(batch, sort_keys=True).encode()
-            ).hexdigest()
-            batch_path = os.path.join(pending_dir, f"batch_{batch_hash}.json")
-            with open(batch_path, "w") as f:
-                json.dump(batch, f)
+        with io.BytesIO() as output:
+            snippet.save(output, format="PNG")
+            image_bytes = output.getvalue()
 
-    # --- Process the Queue ---
-    all_augmentations = {
-        "page_analysis": {},
-        "low_confidence_alternatives": [],
-        "graphical_elements": [],
-    }
-    while True:
-        pending_files = sorted(
-            [os.path.join(pending_dir, f) for f in os.listdir(pending_dir)]
+        task = _process_single_word_snippet(
+            config, model, semaphore, image_bytes, word_data["text"], word_data["id"]
         )
-        if not pending_files:
-            logging.info("Work queue is empty. Processing complete.")
-            break
+        tasks.append(task)
 
-        batch_file_path = pending_files[0]
-        logging.info(f"Processing work item: {os.path.basename(batch_file_path)}")
-        result = _process_batch_file(
-            model=model,
-            image_part=image_part,
-            batch_file_path=batch_file_path,
-            schema=schema,
-            generation_config=generation_config,
-            debug=debug,
-        )
+    word_alternatives = {}
+    for future in asyncio_tqdm.as_completed(
+        tasks, total=len(tasks), desc="Analyzing word snippets"
+    ):
+        result = await future
+        if result and result.get("alternatives"):
+            word_alternatives[result["id"]] = result["alternatives"]
 
-        if result:
-            if not all_augmentations["page_analysis"] and "page_analysis" in result:
-                all_augmentations["page_analysis"] = result["page_analysis"]
-            all_augmentations["low_confidence_alternatives"].extend(
-                result.get("low_confidence_alternatives", [])
-            )
-            all_augmentations["graphical_elements"].extend(
-                result.get("graphical_elements", [])
-            )
-
-    unique_elements = {
-        json.dumps(d, sort_keys=True): d
-        for d in all_augmentations["graphical_elements"]
-    }.values()
-    all_augmentations["graphical_elements"] = list(unique_elements)
-
-    return all_augmentations
+    return word_alternatives
 
 
 def _normalize_text(text: str) -> str:
@@ -519,81 +419,76 @@ def _normalize_text(text: str) -> str:
     return text.strip().lower()
 
 
-def merge_gemini_augmentations(*, transcription: Dict, augmentations: Dict) -> Dict:
-    """Step 3: Merges the batched augmentation data back into the main transcription object."""
-    # ... (Unchanged)
-    logging.info("Merging Gemini augmentations into the final data structure.")
-    transcription["page_analysis"] = augmentations.get("page_analysis", {})
-    transcription["graphical_elements"] = augmentations.get("graphical_elements", [])
-    alt_map = {}
-    for aug in augmentations.get("low_confidence_alternatives", []):
-        for word_alt in aug.get("word_alternatives", []):
-            original_text = word_alt.get("original_text")
-            suggestions = word_alt.get("suggestions", [])
-            if not original_text or not suggestions:
-                continue
-            key = (aug["line_id"], _normalize_text(original_text))
-            normalized_original = _normalize_text(original_text)
-            filtered_suggestions = [
-                s for s in suggestions if _normalize_text(s) != normalized_original
-            ]
-            if key not in alt_map and filtered_suggestions:
-                alt_map[key] = filtered_suggestions
-    for line in transcription["lines"]:
+def merge_all_results(
+    *, transcription: Dict, page_analysis: Dict, word_alternatives: Dict
+) -> Dict:
+    """Phase 4: Merges results from all previous phases into the final JSON."""
+    logging.info("Merging results from all phases into final data structure.")
+    final_data = transcription
+    final_data["page_analysis"] = page_analysis.get("page_analysis", {})
+    final_data["graphical_elements"] = page_analysis.get("graphical_elements", [])
+
+    for line in final_data["lines"]:
         for word in line["words"]:
-            key = (line["line_id"], _normalize_text(word["text"]))
-            if key in alt_map:
-                word["alternatives"] = alt_map.pop(key)
-    return transcription
+            word_id = (
+                f"{line['line_id']}_{word['text']}_{word['bounding_box']['x_min']}"
+            )
+            if word_id in word_alternatives:
+                suggestions = word_alternatives[word_id]
+                normalized_original = _normalize_text(word["text"])
+                word["alternatives"] = [
+                    s for s in suggestions if _normalize_text(s) != normalized_original
+                ]
+    return final_data
 
 
 # ==============================================================================
 # --- MAIN COORDINATOR & EXECUTION ---
 # ==============================================================================
-def main_coordinator(
-    image_path: str, force_recache: bool, debug: bool, batch_size: int
+async def main_coordinator(
+    image_path: str, force_recache: bool, debug: bool, concurrency: int
 ) -> int:
     try:
         config = load_config()
+        genai.configure(api_key=config["gemini_api_key"])
+
         logging.info("--- Phase 1: Document AI Transcription ---")
-        raw_document = call_doc_ai_api(
-            config=config, image_path=image_path, force_recache=force_recache
+        loop = asyncio.get_running_loop()
+        raw_document = await call_doc_ai_api(
+            config=config,
+            image_path=image_path,
+            force_recache=force_recache,
         )
+
         if not raw_document:
             raise ValueError("Failed to get Document AI result.")
         initial_transcription = transform_doc_ai_to_custom_json(
             document=raw_document, image_path=image_path
         )
 
-        logging.info("--- Phase 2: Gemini Qualitative Analysis (Work Queue) ---")
-        contextual_chunks = create_minimized_contextual_chunks(initial_transcription)
-        if not contextual_chunks:
-            logging.warning("No low-confidence words found. Skipping Gemini analysis.")
-            final_result = initial_transcription
-        else:
-            gemini_augmentations = augment_transcription_with_gemini(
-                config=config,
-                image_path=image_path,
-                contextual_chunks=contextual_chunks,
-                schema=GEMINI_AUGMENTATION_SCHEMA,
-                force_recache=force_recache,
-                debug=debug,
-                batch_size=batch_size,
-            )
-            if not gemini_augmentations or not (
-                gemini_augmentations.get("low_confidence_alternatives")
-                or gemini_augmentations.get("graphical_elements")
-            ):
-                logging.warning(
-                    "No valid Gemini analysis results were produced. The final JSON will be un-augmented."
-                )
-                final_result = initial_transcription
-            else:
-                logging.info("--- Phase 3: Merging AI Results ---")
-                final_result = merge_gemini_augmentations(
-                    transcription=initial_transcription,
-                    augmentations=gemini_augmentations,
-                )
+        logging.info("--- Phase 2: Gemini Page-Level 'Macro' Analysis ---")
+        page_analysis = await call_gemini_for_page_analysis(
+            config=config, image_path=image_path, force_recache=force_recache
+        )
+        if not page_analysis:
+            logging.warning("Failed to get page-level analysis. Continuing without it.")
+            page_analysis = {}
+
+        logging.info("--- Phase 3: Gemini Word-Level 'Micro' Analysis (Parallel) ---")
+        word_alternatives = await call_gemini_for_word_alternatives_parallel(
+            config=config,
+            image_path=image_path,
+            transcription=initial_transcription,
+            force_recache=force_recache,
+            concurrency_limit=concurrency,
+        )
+
+        logging.info("--- Phase 4: Merging All Results ---")
+        final_result = merge_all_results(
+            transcription=initial_transcription,
+            page_analysis=page_analysis,
+            word_alternatives=word_alternatives,
+        )
 
         image_basename = os.path.basename(image_path)
         final_filename = f"{image_basename}.final.json"
@@ -660,7 +555,7 @@ if __name__ == "__main__":
         return config
 
     parser = argparse.ArgumentParser(
-        description="A three-phase tool to transcribe and analyze diary pages using Google AI."
+        description="A multi-phase tool to transcribe and analyze diary pages using Google AI."
     )
     parser.add_argument(
         "-i", "--image", required=True, help="Path to the input image file."
@@ -679,18 +574,21 @@ if __name__ == "__main__":
         help="Enable saving of intermediate debug files (e.g., Gemini prompts).",
     )
     parser.add_argument(
-        "--batch-size",
+        "--concurrency-limit",
         type=int,
-        default=5,
-        help="Number of lines to process in each initial Gemini API call.",
+        default=20,
+        help="Max number of parallel API calls to Gemini for word analysis.",
     )
     args = parser.parse_args()
     log_level = logging.INFO if args.verbose else logging.WARNING
     logging.basicConfig(level=log_level, format="[%(levelname)s] %(message)s")
-    exit_code = main_coordinator(
-        image_path=args.image,
-        force_recache=args.force_recache,
-        debug=args.debug,
-        batch_size=args.batch_size,
+
+    exit_code = asyncio.run(
+        main_coordinator(
+            image_path=args.image,
+            force_recache=args.force_recache,
+            debug=args.debug,
+            concurrency=args.concurrency_limit,
+        )
     )
     sys.exit(exit_code)
