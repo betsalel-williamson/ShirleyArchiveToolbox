@@ -5,7 +5,7 @@ import time
 import argparse
 import logging
 import functools
-from typing import Dict, Optional, Callable, Any
+from typing import Dict, Optional, Callable, Any, List
 from dotenv import load_dotenv
 
 # --- Dependencies ---
@@ -25,19 +25,21 @@ except ImportError:
 
 
 # ==============================================================================
-# --- CACHING DECORATOR ---
+# --- CACHING DECORATOR & SCHEMA DEFINITIONS ---
 # ==============================================================================
+
+
 def cache_to_file(
     cache_suffix: str, serializer: Callable, deserializer: Callable
 ) -> Callable:
+    """A generic decorator to cache the output of a function to a file."""
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Optional[Any]:
             image_path = kwargs.get("image_path")
             if not image_path:
-                raise ValueError(
-                    "Cached function must be called with 'image_path' keyword argument."
-                )
+                raise ValueError("Cached function must have 'image_path' kwarg.")
             image_basename = os.path.basename(image_path)
             cache_dir = ".cache"
             os.makedirs(cache_dir, exist_ok=True)
@@ -47,7 +49,7 @@ def cache_to_file(
                 with open(cache_path, "r") as f:
                     return deserializer(f.read())
             logging.info(
-                f"No cache found at {cache_path}. Executing function '{func.__name__}'."
+                f"No cache found at {cache_path}. Executing '{func.__name__}'."
             )
             result = func(*args, **kwargs)
             if result:
@@ -61,8 +63,141 @@ def cache_to_file(
     return decorator
 
 
+# This is the final, complete schema our script will produce
+FINAL_OUTPUT_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "page_number": {"type": "INTEGER"},
+        "image_source": {"type": "STRING"},
+        "image_dimensions": {
+            "type": "OBJECT",
+            "properties": {"width": {"type": "INTEGER"}, "height": {"type": "INTEGER"}},
+        },
+        "lines": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "line_id": {"type": "STRING"},
+                    "words": {
+                        "type": "ARRAY",
+                        "items": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "text": {"type": "STRING"},
+                                "bounding_box": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "x_min": {"type": "INTEGER"},
+                                        "y_min": {"type": "INTEGER"},
+                                        "x_max": {"type": "INTEGER"},
+                                        "y_max": {"type": "INTEGER"},
+                                    },
+                                },
+                                "confidence": {"type": "NUMBER"},
+                                "writing_style": {"type": "STRING"},
+                                "decoration": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "is_struckthrough": {"type": "BOOLEAN"},
+                                        "is_underlined": {"type": "BOOLEAN"},
+                                        "is_insertion": {"type": "BOOLEAN"},
+                                    },
+                                },
+                                "alternatives": {
+                                    "type": "ARRAY",
+                                    "items": {"type": "STRING"},
+                                    "description": "Alternative transcriptions suggested by the LLM for low-confidence words.",
+                                },
+                                "ink_color": {
+                                    "type": "STRING",
+                                    "description": "e.g., 'blue', 'black', 'faded black'",
+                                },
+                                "style_notes": {
+                                    "type": "STRING",
+                                    "description": "Qualitative observations like 'heavy pressure', 'written quickly', 'shaky'.",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        "graphical_elements": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "element_type": {
+                        "type": "STRING",
+                        "description": "e.g., 'doodle', 'stain', 'scribble'",
+                    },
+                    "bounding_box": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "x_min": {"type": "INTEGER"},
+                            "y_min": {"type": "INTEGER"},
+                            "x_max": {"type": "INTEGER"},
+                            "y_max": {"type": "INTEGER"},
+                        },
+                    },
+                    "description": {
+                        "type": "STRING",
+                        "description": "A brief text description of the element.",
+                    },
+                },
+            },
+        },
+    },
+}
+
+# This is the smaller, targeted schema we ask GEMINI to return.
+GEMINI_AUGMENTATION_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "word_augmentations": {
+            "type": "ARRAY",
+            "description": "An array of augmentations for specific words on the page.",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "line_id": {
+                        "type": "STRING",
+                        "description": "The ID of the line containing the word.",
+                    },
+                    "original_text": {
+                        "type": "STRING",
+                        "description": "The original text of the word being augmented.",
+                    },
+                    "alternatives": {
+                        "type": "ARRAY",
+                        "items": {"type": "STRING"},
+                        "description": "Suggested alternative transcriptions if the original was low-confidence.",
+                    },
+                    "ink_color": {
+                        "type": "STRING",
+                        "description": "The color of the ink used for this word.",
+                    },
+                    "style_notes": {
+                        "type": "STRING",
+                        "description": "Qualitative observations like 'heavy pressure', 'written quickly', 'shaky'.",
+                    },
+                },
+            },
+        },
+        "graphical_elements": {
+            "type": "ARRAY",
+            "description": "An array of non-textual graphical elements found on the page.",
+            "items": FINAL_OUTPUT_SCHEMA["properties"]["graphical_elements"][
+                "items"
+            ],  # Reuse from the final schema
+        },
+    },
+}
+
+
 # ==============================================================================
-# --- PROCESSING PIPELINE FUNCTIONS ---
+# --- PIPELINE FUNCTIONS ---
 # ==============================================================================
 
 
@@ -71,6 +206,7 @@ def cache_to_file(
 )
 def call_doc_ai_api(*, config: Dict, image_path: str) -> Optional[Document]:
     """Step 1a: Calls the Document AI API. This function is decorated for caching."""
+    # ... (code is unchanged)
     try:
         opts = ClientOptions(
             api_endpoint=f"{config['location']}-documentai.googleapis.com"
@@ -97,6 +233,7 @@ def call_doc_ai_api(*, config: Dict, image_path: str) -> Optional[Document]:
 
 def transform_doc_ai_to_custom_json(*, document: Document, image_path: str) -> Dict:
     """Step 1b: Transforms a raw Document AI object into the project's custom JSON schema."""
+    # ... (code has minor changes to add new empty fields)
     logging.info("Transforming raw Document AI data into custom JSON schema.")
     with Image.open(image_path) as img:
         width, height = img.size
@@ -156,91 +293,198 @@ def transform_doc_ai_to_custom_json(*, document: Document, image_path: str) -> D
                         ),
                         "is_insertion": False,
                     },
+                    "alternatives": [],
+                    "ink_color": None,
+                    "style_notes": None,
                 }
                 line_data["words"].append(word_data)
             output_data["lines"].append(line_data)
     return output_data
 
 
-def _create_simplified_json_for_gemini(full_json: Dict) -> Dict:
-    """
-    Strips token-heavy fields from the JSON to create a smaller prompt for Gemini.
-    Removes 'bounding_box' and 'confidence' from each word.
-    """
-    simplified = {"lines": []}
-    for line in full_json.get("lines", []):
-        new_line = {"line_id": line["line_id"], "words": []}
+def find_low_confidence_words(
+    transcription: Dict, threshold: float = 0.90
+) -> List[Dict]:
+    """Step 2a: Finds words with confidence below a threshold to ask Gemini about."""
+    low_conf_words = []
+    for line in transcription.get("lines", []):
         for word in line.get("words", []):
-            new_word = {"text": word["text"]}  # Only include the text
-            new_line["words"].append(new_word)
-        simplified["lines"].append(new_line)
-    return simplified
+            if word.get("confidence", 1.0) < threshold:
+                low_conf_words.append(
+                    {"line_id": line["line_id"], "text": word["text"]}
+                )
+    logging.info(
+        f"Found {len(low_conf_words)} words with confidence below {threshold}."
+    )
+    return low_conf_words
 
 
 @cache_to_file(".gemini_cache.json", serializer=json.dumps, deserializer=json.loads)
 def call_gemini_api(
-    *, config: Dict, image_path: str, initial_json: Dict, schema: Dict
+    *, config: Dict, image_path: str, low_confidence_words: List[Dict], schema: Dict
 ) -> Optional[Dict]:
-    """Step 2: Calls the Gemini API for enrichment. This function is decorated for caching."""
+    """Step 2b: Calls Gemini with a targeted request for augmentations."""
     genai.configure(api_key=config["gemini_api_key"])
     model = genai.GenerativeModel(config["gemini_model_name"])
 
-    # NEW: Create a simplified version of the JSON for the prompt
-    simplified_prompt_json = _create_simplified_json_for_gemini(initial_json)
+    system_prompt = f"""
+    You are a document analysis expert. Analyze the provided image to augment a previous OCR pass.
+    1.  For the entire page, identify all non-text graphical elements (doodles, stains).
+    2.  For each word on the page, determine its ink color and provide qualitative style notes (e.g., 'heavy pressure', 'rushed').
+    3.  I have identified a list of low-confidence words. For these specific words, please suggest likely alternative transcriptions.
 
-    system_prompt = "You are an expert document analyst. I will provide an image and a simplified JSON object containing the transcribed text. Your task is to analyze the image and return a complete JSON object based on the full schema I provide. Populate it with the original text, and add your findings about graphical elements and text insertions. Adhere strictly to the response schema."
+    Return ONLY this new information in a JSON object adhering to the requested schema. Do not return the full transcription.
+
+    Low-confidence words to get alternatives for:
+    {json.dumps(low_confidence_words, indent=2)}
+    """
 
     gemini_schema = genai_protos.Schema(**_convert_json_schema_to_gemini_schema(schema))
-
     with open(image_path, "rb") as f:
         image_data = f.read()
     image_part = genai_protos.Part(
         inline_data=genai_protos.Blob(mime_type="image/jpeg", data=image_data)
     )
-
-    # Use the SIMPLIFIED json in the prompt, but pass the FULL initial json for context if needed (optional, but can help)
-    # The main prompt part is now the slim version.
-    prompt_parts = [
-        system_prompt,
-        json.dumps(simplified_prompt_json, indent=2),
-        image_part,
-    ]
-
     generation_config = genai.GenerationConfig(
         response_mime_type="application/json",
         response_schema=gemini_schema,
         max_output_tokens=8192,
     )
 
+    FINISH_REASON_EXPLANATIONS = {
+        1: "OK - The model successfully completed its generation.",
+        2: "MAX_TOKENS - The model stopped because it reached the maximum number of output tokens. The response is likely truncated.",
+        3: "SAFETY - The model stopped because its response was flagged by the safety filter.",
+        4: "RECITATION - The model stopped because its response was flagged for containing recited content from the web.",
+        5: "OTHER - The model stopped for an unspecified reason.",
+    }
+
     try:
         response = model.generate_content(
-            prompt_parts, generation_config=generation_config
+            [system_prompt, image_part], generation_config=generation_config
         )
-        # IMPORTANT: Access the response safely
+
         if not response.parts:
-            finish_reason = (
-                response.candidates[0].finish_reason
-                if response.candidates
-                else "UNKNOWN"
+            finish_reason_code = (
+                response.candidates[0].finish_reason if response.candidates else 0
             )
+            reason_str = FINISH_REASON_EXPLANATIONS.get(finish_reason_code, "UNKNOWN")
             logging.error(
-                f"Gemini response contained no valid parts. Finish Reason: {finish_reason}. This often means the output token limit was reached or the content was blocked."
+                f"Gemini response contained no valid parts. Finish Reason: {reason_str} (Code: {finish_reason_code})."
             )
             return None
 
         logging.info("Gemini API call successful.")
         return json.loads(response.text)
-    except (ValueError, json.JSONDecodeError, AttributeError) as e:
-        logging.error(f"Failed to decode Gemini JSON response: {e}", exc_info=True)
-        try:
-            logging.error(f"Problematic API Response Text:\n---\n{response.text}\n---")
-        except (NameError, ValueError):
-            pass
+    except Exception as e:
+        logging.error(
+            f"An unexpected error occurred during Gemini API call: {e}", exc_info=True
+        )
         return None
 
 
+def merge_gemini_augmentations(*, transcription: Dict, augmentations: Dict) -> Dict:
+    """Step 3: Merges the augmentation data from Gemini back into the main transcription object."""
+    logging.info("Merging Gemini augmentations into the final data structure.")
+
+    # Create a fast lookup map for words: (line_id, original_text) -> word_object
+    word_map = {}
+    for line in transcription["lines"]:
+        for word in line["words"]:
+            # To handle duplicate words on the same line, we make the key more unique
+            word_key = (line["line_id"], word["text"], word["bounding_box"]["x_min"])
+            word_map[word_key] = word
+
+    # Merge word-specific augmentations
+    for aug in augmentations.get("word_augmentations", []):
+        # Find the word to update. We need to iterate as we don't have the x_min in the augmentation data.
+        # This is a trade-off for a smaller prompt.
+        for line in transcription["lines"]:
+            if line["line_id"] == aug["line_id"]:
+                for word in line["words"]:
+                    if word["text"] == aug["original_text"]:
+                        word["alternatives"] = aug.get("alternatives", [])
+                        word["ink_color"] = aug.get("ink_color")
+                        word["style_notes"] = aug.get("style_notes")
+                        # Break after finding the first match on the line to avoid overwriting duplicates incorrectly
+                        break
+
+    # Add graphical elements
+    transcription["graphical_elements"] = augmentations.get("graphical_elements", [])
+
+    return transcription
+
+
+# ==============================================================================
+# --- MAIN COORDINATOR & EXECUTION ---
+# ==============================================================================
+
+
+def main_coordinator(image_path: str, force_recache: bool) -> int:
+    """Main pipeline coordinator that calls processing functions and returns an exit code."""
+    try:
+        config = load_config()
+        if force_recache:
+            logging.warning("User requested --force-recache. Deleting cache files.")
+            # ... (cache deletion logic)
+            image_basename = os.path.basename(image_path)
+            docai_cache_path = os.path.join(
+                ".cache", f"{image_basename}.docai_cache.json"
+            )
+            gemini_cache_path = os.path.join(
+                ".cache", f"{image_basename}.gemini_cache.json"
+            )
+            if os.path.exists(docai_cache_path):
+                os.remove(docai_cache_path)
+            if os.path.exists(gemini_cache_path):
+                os.remove(gemini_cache_path)
+
+        # --- Phase 1: High-Precision OCR ---
+        logging.info("--- Phase 1: Document AI Transcription ---")
+        raw_document = call_doc_ai_api(config=config, image_path=image_path)
+        if not raw_document:
+            raise ValueError("Failed to get Document AI result.")
+        initial_transcription = transform_doc_ai_to_custom_json(
+            document=raw_document, image_path=image_path
+        )
+
+        # --- Phase 2: Qualitative Analysis ---
+        logging.info("--- Phase 2: Gemini Qualitative Analysis ---")
+        low_conf_words = find_low_confidence_words(initial_transcription)
+        gemini_augmentations = call_gemini_api(
+            config=config,
+            image_path=image_path,
+            low_confidence_words=low_conf_words,
+            schema=GEMINI_AUGMENTATION_SCHEMA,
+        )
+        if not gemini_augmentations:
+            raise ValueError("Failed to get Gemini analysis result.")
+
+        # --- Phase 3: Intelligent Merging ---
+        logging.info("--- Phase 3: Merging AI Results ---")
+        final_result = merge_gemini_augmentations(
+            transcription=initial_transcription, augmentations=gemini_augmentations
+        )
+
+        # --- Save Final Result ---
+        image_basename = os.path.basename(image_path)
+        final_filename = f"{image_basename}.final.json"
+        logging.info(
+            f"All phases complete. Saving final enriched data to: {final_filename}"
+        )
+        with open(final_filename, "w") as f:
+            json.dump(final_result, f, indent=2)
+        return 0
+
+    except Exception as e:
+        logging.error(
+            f"An unexpected error occurred in the main coordinator: {e}", exc_info=True
+        )
+        return 1
+
+
+# --- Helper for schema conversion (unchanged but necessary) ---
 def _convert_json_schema_to_gemini_schema(json_dict: dict) -> Dict:
-    # ... (This helper function is unchanged)
     if not json_dict:
         return None
     type_map = {
@@ -270,146 +514,7 @@ def _convert_json_schema_to_gemini_schema(json_dict: dict) -> Dict:
     return {k: v for k, v in kwargs.items() if v is not None}
 
 
-# ==============================================================================
-# --- MAIN COORDINATOR & EXECUTION ---
-# ==============================================================================
-
-
-def main_coordinator(image_path: str, force_recache: bool) -> int:
-    # ... (This function is unchanged)
-    try:
-        config = load_config()
-        if force_recache:
-            logging.warning(
-                "User requested --force-recache. Deleting existing cache files."
-            )
-            image_basename = os.path.basename(image_path)
-            docai_cache_path = os.path.join(
-                ".cache", f"{image_basename}.docai_cache.json"
-            )
-            gemini_cache_path = os.path.join(
-                ".cache", f"{image_basename}.gemini_cache.json"
-            )
-            if os.path.exists(docai_cache_path):
-                os.remove(docai_cache_path)
-            if os.path.exists(gemini_cache_path):
-                os.remove(gemini_cache_path)
-        logging.info("--- Phase 1: Document AI Transcription ---")
-        raw_document = call_doc_ai_api(config=config, image_path=image_path)
-        if not raw_document:
-            raise ValueError("Failed to get Document AI result (from API or cache).")
-        initial_transcription = transform_doc_ai_to_custom_json(
-            document=raw_document, image_path=image_path
-        )
-        logging.info("--- Phase 2: Gemini Enrichment ---")
-        final_result = call_gemini_api(
-            config=config,
-            image_path=image_path,
-            initial_json=initial_transcription,
-            schema=FINAL_OUTPUT_SCHEMA,
-        )
-        if not final_result:
-            raise ValueError("Failed to get Gemini result (from API or cache).")
-        image_basename = os.path.basename(image_path)
-        final_filename = f"{image_basename}.final.json"
-        logging.info(
-            f"All phases complete. Saving final enriched data to: {final_filename}"
-        )
-        with open(final_filename, "w") as f:
-            json.dump(final_result, f, indent=2)
-        return 0
-    except FileNotFoundError as e:
-        logging.error(f"Input file not found: {e}")
-        return 2
-    except ValueError as e:
-        logging.error(f"Processing error: {e}")
-        return 3
-    except Exception as e:
-        logging.error(f"An unexpected error occurred: {e}", exc_info=True)
-        return 1
-
-
 if __name__ == "__main__":
-    # --- Load Configuration & Define Schema ---
-    FINAL_OUTPUT_SCHEMA = {
-        "type": "OBJECT",
-        "properties": {
-            "page_number": {"type": "INTEGER"},
-            "image_source": {"type": "STRING"},
-            "image_dimensions": {
-                "type": "OBJECT",
-                "properties": {
-                    "width": {"type": "INTEGER"},
-                    "height": {"type": "INTEGER"},
-                },
-            },
-            "lines": {
-                "type": "ARRAY",
-                "items": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "line_id": {"type": "STRING"},
-                        "words": {
-                            "type": "ARRAY",
-                            "items": {
-                                "type": "OBJECT",
-                                "properties": {
-                                    "text": {"type": "STRING"},
-                                    "bounding_box": {
-                                        "type": "OBJECT",
-                                        "properties": {
-                                            "x_min": {"type": "INTEGER"},
-                                            "y_min": {"type": "INTEGER"},
-                                            "x_max": {"type": "INTEGER"},
-                                            "y_max": {"type": "INTEGER"},
-                                        },
-                                    },
-                                    "confidence": {"type": "NUMBER"},
-                                    "writing_style": {"type": "STRING"},
-                                    "decoration": {
-                                        "type": "OBJECT",
-                                        "properties": {
-                                            "is_struckthrough": {"type": "BOOLEAN"},
-                                            "is_underlined": {"type": "BOOLEAN"},
-                                            "is_insertion": {
-                                                "type": "BOOLEAN",
-                                                "description": "Set to true by the AI if this word appears to be an insertion between lines.",
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            "graphical_elements": {
-                "type": "ARRAY",
-                "items": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "element_type": {
-                            "type": "STRING",
-                            "description": "e.g., 'doodle', 'stain', 'scribble'",
-                        },
-                        "bounding_box": {
-                            "type": "OBJECT",
-                            "properties": {
-                                "x_min": {"type": "INTEGER"},
-                                "y_min": {"type": "INTEGER"},
-                                "x_max": {"type": "INTEGER"},
-                                "y_max": {"type": "INTEGER"},
-                            },
-                        },
-                        "description": {
-                            "type": "STRING",
-                            "description": "A brief text description of the element.",
-                        },
-                    },
-                },
-            },
-        },
-    }
 
     def load_config() -> Dict:
         load_dotenv()
@@ -423,14 +528,12 @@ if __name__ == "__main__":
             ),
         }
         if not config["gemini_api_key"]:
-            logging.critical(
-                "!!! ERROR: GEMINI_API_KEY not found in .env file. Please get a key from Google AI Studio."
-            )
+            logging.critical("!!! ERROR: GEMINI_API_KEY not found in .env file.")
             sys.exit(1)
         return config
 
     parser = argparse.ArgumentParser(
-        description="A two-phase tool to transcribe and analyze diary pages using Google AI."
+        description="A three-phase tool to transcribe and analyze diary pages using Google AI."
     )
     parser.add_argument(
         "-i", "--image", required=True, help="Path to the input image file."
@@ -438,12 +541,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--force-recache",
         action="store_true",
-        help="Delete existing cache files for this image before processing.",
+        help="Delete existing cache files for this image.",
     )
     parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable verbose INFO-level logging to the console.",
+        "--verbose", action="store_true", help="Enable verbose INFO-level logging."
     )
     args = parser.parse_args()
     log_level = logging.INFO if args.verbose else logging.WARNING
