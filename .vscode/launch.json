@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "process_journal image00009_crop verbose debug",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "process_journal",
+      "python": "${workspaceFolder}/transcription_tool.py/.venv/bin/python",
+      "justMyCode": true,
+      "args": [
+        "-i",
+        "image00008_crop.jpg",
+        "--verbose",
+        "--debug",
+      ],
+      "envFile": "${workspaceFolder}/transcription_tool.py/.env",
+      "subProcess": true,
+      "cwd": "${workspaceFolder}/transcription_tool.py",
+    }
+  ]
+}
