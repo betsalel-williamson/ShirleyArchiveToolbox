@@ -232,19 +232,19 @@ if __name__ == "__main__":
     ap.add_argument(
         "--kernel-w",
         type=int,
-        default=30,
+        default=90,
         help="Width of the rectangular morphological closing kernel. Used to connect words on the same line.",
     )
     ap.add_argument(
         "--kernel-h",
         type=int,
-        default=10,
+        default=30,
         help="Height of the rectangular morphological closing kernel. Should be smaller than the space between lines.",
     )
     ap.add_argument(
         "--erosion-k",
         type=int,
-        default=12,
+        default=30,
         help="Size of the square erosion kernel for noise removal",
     )
     ap.add_argument(
