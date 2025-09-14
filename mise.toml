@@ -1,0 +1,23 @@
+[tools]
+python = "3.12.11"
+nodejs = "latest"
+pnpm = "latest"
+uv = "latest"
+
+[tasks]
+# Global tasks
+install = "mise install"
+install-all = """
+cd image_transform_tool.py && mise run install && cd .. && \
+cd transcription_tool.py && mise run install && cd .. && \
+cd validation_tool.py && mise run install && cd .. && \
+cd validation_tool.ts && mise run install && cd ..
+"""
+clean-all = """
+cd image_transform_tool.py && mise run clean && cd .. && \
+cd transcription_tool.py && mise run clean && cd .. && \
+cd validation_tool.py && mise run clean && cd .. && \
+cd validation_tool.ts && mise run clean && cd ..
+"""
+up = "docker compose up -d"
+down = "docker compose down"

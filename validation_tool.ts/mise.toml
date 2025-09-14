@@ -1,0 +1,7 @@
+[tasks]
+install = "pnpm install"
+dev = "pnpm dev"
+build = "pnpm build"
+test = "pnpm test"
+lint = "pnpm lint"
+clean = "pnpm clean"

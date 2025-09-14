@@ -1,0 +1,18 @@
+[project]
+name = "image-transform-tool"
+requires-python = "==3.12.11"
+version = "0.1.0"
+dependencies = [
+    "google-generativeai",
+    "numpy",
+    "opencv-python",
+    "Pillow",
+    "python-dotenv",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["image_transform_tool"]

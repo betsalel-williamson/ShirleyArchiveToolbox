@@ -1,4 +1,0 @@
-python-dotenv
-google-cloud-documentai
-Pillow
-google-generativeai

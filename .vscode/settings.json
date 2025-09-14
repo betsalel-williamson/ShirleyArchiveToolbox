@@ -1,0 +1,25 @@
+{
+    "python-envs.pythonProjects": [
+        {
+            "path": "image_transform_tool.py",
+            "envManager": "ms-python.python:venv",
+            "packageManager": "ms-python.python:pip"
+        },
+        {
+            "path": "transcription_tool.py",
+            "envManager": "ms-python.python:venv",
+            "packageManager": "ms-python.python:pip"
+        },
+        {
+            "path": "validation_tool.py",
+            "envManager": "ms-python.python:venv",
+            "packageManager": "ms-python.python:pip"
+        }
+    ],
+    // Python interpreter and Node.js runtime are managed by mise.
+    // VS Code extensions should pick them up from the shell's PATH.
+    "debug.javascript.defaultRuntimeExecutable": {
+        "pwa-node": "~/.local/share/mise/shims/node"
+    },
+    "python.defaultInterpreterPath": "~/.local/share/mise/installs/python/3.12.11/bin/python"
+}

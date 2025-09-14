@@ -1,0 +1,4 @@
+[tasks]
+install = "uv sync"
+run = "python validation_tool/run.py" # Example, adjust as needed
+clean = "rm -rf __pycache__ .venv venv dist *.egg-info uv.lock"

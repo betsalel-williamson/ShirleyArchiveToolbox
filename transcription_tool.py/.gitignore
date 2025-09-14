@@ -1,13 +1,5 @@
-.cache/
-.venv/
 *.jpg
 .env
 debug/
 *.json
 update.sh
-__pycache__
-
-# Byte-compiled / optimized / DLL files
-*.pyc
-*.pyd
-*.so

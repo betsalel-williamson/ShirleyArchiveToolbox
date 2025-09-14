@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "clean": "rm -rf node_modules pnpm-lock.yaml"
   },
   "dependencies": {
     "compression": "^1.8.0",

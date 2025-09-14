@@ -1,0 +1,4 @@
+[tasks]
+install = "uv sync"
+run = "python image_transform_tool/auto_crop.py" # Example, adjust as needed
+clean = "rm -rf __pycache__ .venv venv dist *.egg-info uv.lock"
