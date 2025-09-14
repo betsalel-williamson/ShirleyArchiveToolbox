@@ -1,0 +1,3 @@
+[submodule "genai-specs"]
+	path = genai-specs
+	url = git@github.com:betsalel-williamson/genai-specs.git
